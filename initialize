@@ -1,0 +1,8 @@
+# This script must be sourced as it modifies the environment
+
+echo "Initializing the build environment..." &&
+
+# Initialize the build environment
+. layers/poky/oe-init-build-env &&
+
+echo "Environment set up and ready for work"

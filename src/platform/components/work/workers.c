@@ -1,0 +1,318 @@
+
+#include <menabrea/workers.h>
+#include "work.h"
+#include "worker_table.h"
+#include "messaging.h"
+#include "core_queue_groups.h"
+#include <menabrea/exception.h>
+#include <menabrea/log.h>
+#include <menabrea/common.h>
+#include <event_machine.h>
+#include <string.h>
+
+static em_status_t WorkerEoStart(void * eoCtx, em_eo_t eo, const em_eo_conf_t * conf);
+static em_status_t WorkerEoLocalStart(void * eoCtx, em_eo_t eo);
+static em_status_t WorkerEoStop(void * eoCtx, em_eo_t eo);
+static em_status_t WorkerEoLocalStop(void * eoCtx, em_eo_t eo);
+static void WorkerEoReceive(void * eoCtx, em_event_t event, em_event_type_t type, em_queue_t queue, void * qCtx);
+
+void WorkInit(SWorkConfig * config) {
+
+    LogPrint(ELogSeverityLevel_Debug, "%s(): Workers framework initialization started", __FUNCTION__);
+    SetUpQueueGroups();
+    WorkerTableInit(config->GlobalWorkerId);
+    MessagingInit(&config->MessagingPoolConfig);
+    LogPrint(ELogSeverityLevel_Debug, "%s(): Workers framework initialized successfully", __FUNCTION__);
+}
+
+void WorkTeardown(void) {
+
+    LogPrint(ELogSeverityLevel_Debug, "%s(): Workers framework teardown started", __FUNCTION__);
+    WorkerTableTeardown();
+    MessagingTeardown();
+    TearDownQueueGroups();
+    LogPrint(ELogSeverityLevel_Debug, "%s(): Workers framework torn down gracefully", __FUNCTION__);
+}
+
+TWorkerId DeployWorker(const SWorkerConfig * config) {
+
+    AssertTrue(config != NULL);
+    if (unlikely(config->WorkerBody == NULL)) {
+
+        LogPrint(ELogSeverityLevel_Warning, "Attempted to register worker %s without a body function", \
+            config->Name);
+        return WORKER_ID_INVALID;
+    }
+
+    LogPrint(ELogSeverityLevel_Debug, "Deploying %s worker %s...", \
+        config->Parallel ? "parallel" : "atomic", config->Name);
+
+    /* Reserve the context */
+    SWorkerContext * context = ReserveWorkerContext(config->WorkerId);
+    if (unlikely(context == NULL)) {
+
+        LogPrint(ELogSeverityLevel_Error, "Failed to reserve context for worker %s", \
+            config->Name);
+        return WORKER_ID_INVALID;
+    }
+    context->UserInit = config->UserInit;
+    context->UserLocalInit = config->UserLocalInit;
+    context->UserLocalExit = config->UserLocalExit;
+    context->UserExit = config->UserExit;
+    context->WorkerBody = config->WorkerBody;
+    /* Copy the name and ensure proper NULL-termination (see strncpy manpage) */
+    (void) strncpy(context->Name, config->Name, sizeof(context->Name) - 1);
+    context->Name[sizeof(context->Name) - 1] = '\0';
+    context->CoreMask = config->CoreMask;
+    context->Parallel = config->Parallel;
+
+    /* Create the EO */
+    em_eo_t eo = em_eo_create(
+        context->Name,
+        WorkerEoStart,
+        WorkerEoLocalStart,
+        WorkerEoStop,
+        WorkerEoLocalStop,
+        WorkerEoReceive,
+        context
+    );
+
+    if (unlikely(eo == EM_EO_UNDEF)) {
+
+        LogPrint(ELogSeverityLevel_Error, "Failed to create execution object for worker %s", \
+            context->Name);
+        ReleaseWorkerContext(context->WorkerId);
+        return WORKER_ID_INVALID;
+    }
+
+    /* Create the queue */
+    em_queue_t queue = em_queue_create(
+        context->Name,
+        context->Parallel ? EM_QUEUE_TYPE_PARALLEL : EM_QUEUE_TYPE_ATOMIC,
+        EM_QUEUE_PRIO_NORMAL,
+        MapCoreMaskToQueueGroup(context->CoreMask),
+        NULL
+    );
+
+    if (unlikely(queue == EM_QUEUE_UNDEF)) {
+
+        LogPrint(ELogSeverityLevel_Error, "Failed to create queue for worker %s", \
+            context->Name);
+        ReleaseWorkerContext(context->WorkerId);
+        (void) em_eo_delete(eo);
+        return WORKER_ID_INVALID;
+    }
+
+    AssertTrue(EM_OK == em_eo_add_queue(eo, queue, 0, NULL));
+
+    context->Eo = eo;
+    context->Queue = queue;
+
+    /* Start the EO */
+    if (unlikely(EM_OK != em_eo_start(eo, NULL, NULL, 0, NULL))) {
+
+        LogPrint(ELogSeverityLevel_Error, "Failed to start the EO of worker %s (queue: %" PRI_QUEUE ", eo: %" PRI_EO ")", \
+            context->Name, context->Queue, context->Eo);
+        ReleaseWorkerContext(context->WorkerId);
+        /* Starting from EM-ODP v1.2.3 em_eo_delete() should remove all the remaining queues and
+         * delete them before deleting the actual EO */
+        (void) em_eo_delete(eo);
+        return WORKER_ID_INVALID;
+    }
+
+    /* If we are here, global init succeeded - note that local (per-core) inits are not allowed to fail, i.e. the worker is now online */
+    MarkDeploymentSuccessful(context->WorkerId);
+
+    LogPrint(ELogSeverityLevel_Debug, "Successfully deployed %s worker %s (id: 0x%x: queue: %" PRI_QUEUE ", eo: %" PRI_EO ", mask: 0x%x)", \
+        context->Parallel ? "parallel" : "atomic", context->Name, context->WorkerId, context->Queue, context->Eo, context->CoreMask);
+    return context->WorkerId;
+}
+
+void TerminateWorker(TWorkerId workerId) {
+
+    LogPrint(ELogSeverityLevel_Info, "Terminating worker 0x%x...", workerId);
+
+    LockWorkerTableEntry(workerId);
+    SWorkerContext * context = FetchWorkerContext(workerId);
+
+    if (context->State == EWorkerState_Active) {
+
+        /* Sanity-check internal consistency */
+        AssertTrue(workerId == context->WorkerId);
+
+        /* Mark the worker as terminating - the context will be released in the
+         * EO stop callback */
+        MarkTeardownInProgress(workerId);
+        AssertTrue(EM_OK == em_eo_stop(context->Eo, 0, NULL));
+        UnlockWorkerTableEntry(workerId);
+
+    } else {
+
+        EWorkerState state = context->State;
+        UnlockWorkerTableEntry(workerId);
+        LogPrint(ELogSeverityLevel_Warning, "%s(): Worker 0x%x in invalid state: %d", \
+            __FUNCTION__, workerId, state);
+    }
+}
+
+void * GetLocalData(void) {
+
+    em_eo_t self = em_eo_current();
+    /* Do not allow calling this function from a non-EO context */
+    AssertTrue(self != EM_EO_UNDEF);
+    SWorkerContext * context = (SWorkerContext *) em_eo_get_context(self);
+    int core = em_core_id();
+    /* Return data local to the current core */
+    return context->Private[core];
+}
+
+void SetLocalData(void * data) {
+
+    em_eo_t self = em_eo_current();
+    /* Do not allow calling this function from a non-EO context */
+    AssertTrue(self != EM_EO_UNDEF);
+    SWorkerContext * context = (SWorkerContext *) em_eo_get_context(self);
+    int core = em_core_id();
+    /* Set data local to the current core */
+    context->Private[core] = data;
+}
+
+TWorkerId GetOwnWorkerId(void) {
+
+    em_eo_t self = em_eo_current();
+    /* Do not allow calling this function from a non-EO context */
+    AssertTrue(self != EM_EO_UNDEF);
+    SWorkerContext * context = (SWorkerContext *) em_eo_get_context(self);
+    return context->WorkerId;
+}
+
+void LeaveCriticalSection(void) {
+
+    em_eo_t self = em_eo_current();
+    /* Do not allow calling this function from a non-EO context */
+    AssertTrue(self != EM_EO_UNDEF);
+    SWorkerContext * context = (SWorkerContext *) em_eo_get_context(self);
+
+    /* Check if parallel worker, i.e. one with a parallel queue associated with
+     * them. If not (i.e. queue is of type EM_QUEUE_TYPE_ATOMIC) then we can
+     * give a hint to the scheduler that it is safe to schedule another instance
+     * of this worker in parallel. */
+    if (!context->Parallel) {
+
+        /* Leave atomic processing context */
+        em_atomic_processing_end();
+    }
+}
+
+void TerminateAllWorkers(void) {
+
+    LogPrint(ELogSeverityLevel_Debug, "Terminating lingering workers...");
+
+    for (TWorkerId i = 0; i < MAX_WORKER_COUNT; i++) {
+
+        SWorkerContext * context = FetchWorkerContext(i);
+        if (context->State == EWorkerState_Active) {
+
+            TerminateWorker(MakeWorkerIdGlobal(i));
+        }
+    }
+}
+
+static em_status_t WorkerEoStart(void * eoCtx, em_eo_t eo, const em_eo_conf_t * conf) {
+
+    SWorkerContext * context = (SWorkerContext *) eoCtx;
+
+    (void) eo;
+    (void) conf;
+
+    if (context->UserInit) {
+
+        /* Call user-provided initialization function */
+        int userStatus = context->UserInit();
+        if (userStatus) {
+
+            LogPrint(ELogSeverityLevel_Warning, "User's global initialization function for worker %s failed (return value: %d)", \
+                context->Name, userStatus);
+            /* Return error, resources will be cleaned up in the 'DeployWorker' function */
+            return EM_ERROR;
+        }
+    }
+
+    return EM_OK;
+}
+
+static em_status_t WorkerEoLocalStart(void * eoCtx, em_eo_t eo) {
+
+    SWorkerContext * context = (SWorkerContext *) eoCtx;
+    int core = em_core_id();
+    /* Check if the worker has been deployed to the current core - only
+     * run user-defined init callback on the relevant cores that will
+     * host/run the worker */
+    int isHostToWorker = (1 << core) & context->CoreMask;
+
+    if (isHostToWorker && context->UserLocalInit) {
+
+        /* Run user-defined initialization function. Note that this will be run on
+         * different cores in different processes so we rely here on the fact that the
+         * address spaces look the same, i.e. the user library is loaded before
+         * the fork. */
+        context->UserLocalInit(core);
+    }
+
+    return EM_OK;
+}
+
+static em_status_t WorkerEoStop(void * eoCtx, em_eo_t eo) {
+
+    SWorkerContext * context = (SWorkerContext *) eoCtx;
+
+    if (context->UserExit) {
+
+        context->UserExit();
+    }
+
+    ReleaseWorkerContext(context->WorkerId);
+
+    /* Starting from EM-ODP v1.2.3 em_eo_delete() should remove all the remaining queues and
+     * delete them before deleting the actual EO */
+    AssertTrue(EM_OK == em_eo_delete(eo));
+
+    return EM_OK;
+}
+
+static em_status_t WorkerEoLocalStop(void * eoCtx, em_eo_t eo) {
+
+    SWorkerContext * context = (SWorkerContext *) eoCtx;
+    int core = em_core_id();
+    /* Check if the worker has been deployed to the current core - only
+     * run user-defined exit callback on the relevant cores that used to
+     * host/run the worker */
+    int isHostToWorker = (1 << core) & context->CoreMask;
+
+    if (isHostToWorker && context->UserLocalExit) {
+
+        /* Run user-defined teardown function. Note that this will be run on
+         * different cores in different processes so we rely here on the fact that the
+         * address spaces look the same, i.e. the user library is loaded before
+         * the fork. */
+        context->UserLocalExit(core);
+    }
+
+    return EM_OK;
+}
+
+static void WorkerEoReceive(void * eoCtx, em_event_t event, em_event_type_t type, em_queue_t queue, void * qCtx) {
+
+    SWorkerContext * context = (SWorkerContext *) eoCtx;
+
+    (void) type;
+    (void) queue;
+    (void) qCtx;
+
+    /* TODO: Add statistics/profiling here (under spinlock as the worker may be parallel) */
+
+
+    AssertTrue(context->WorkerBody != NULL);
+    /* Pass the event to the user-provided handler */
+    context->WorkerBody(event);
+}

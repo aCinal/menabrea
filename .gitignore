@@ -1,0 +1,11 @@
+# Ignore build artifacts, but include the local.conf file
+build/*/*
+!build/conf/local.conf
+build/bitbake-cookerdaemon.log
+
+# Ignore common layers, only include layers specific for the project
+layers/*
+!layers/meta-em-odp
+!layers/meta-menabrea-app
+!layers/meta-menabrea-kernel
+!layers/meta-menabrea-platform

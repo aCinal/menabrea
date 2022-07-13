@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+
+YOCTO_LTS_BRANCH=dunfell
+
+echo "Cloning the poky reference distribution..." &&
+# Fetch the reference Yocto distribution (fetch from long term support branch)
+git clone git://git.yoctoproject.org/poky -b ${YOCTO_LTS_BRANCH} layers/poky &&
+echo "poky cloned successfully" &&
+
+# Fetch meta-openembedded
+echo "Cloning the OpenEmbedded common metalayers..." &&
+git clone git://git.openembedded.org/meta-openembedded -b ${YOCTO_LTS_BRANCH} layers/meta-openembedded &&
+echo "meta-openembedded cloned successfully..." &&
+
+echo "Cloning the Raspberry Pi BSP metalayer..." &&
+# Fetch the Raspberry Pi board support metalayer (fetch from master)
+git clone git://git.yoctoproject.org/meta-raspberrypi -b ${YOCTO_LTS_BRANCH} layers/meta-raspberrypi &&
+echo "meta-raspberrypi cloned successfully" &&
+
+# Set up the environment (allows calling bitbake-layers and cd's to build/)
+. initialize &&
+
+# Add common OpenEmbedded layers
+echo "Adding common OpenEmbedded layers..." &&
+bitbake-layers add-layer ../layers/meta-openembedded/meta-oe &&
+# bitbake-layers add-layer ../layers/meta-openembedded/meta-python &&
+# bitbake-layers add-layer ../layers/meta-openembedded/meta-networking &&
+
+# Add Raspberry Pi BSP layer
+echo "Adding Raspberry Pi BSP layer..." &&
+bitbake-layers add-layer ../layers/meta-raspberrypi &&
+
+# Add OpenEM/ODP layer
+echo "Adding OpenEventMachine/OpenDataPlane layer..." &&
+bitbake-layers add-layer ../layers/meta-em-odp &&
+
+# Add kernel customization layer
+echo "Adding kernel customization and device drivers layer..." &&
+bitbake-layers add-layer ../layers/meta-menabrea-kernel &&
+
+# Add platform layer
+echo "Adding platform layer..." &&
+bitbake-layers add-layer ../layers/meta-menabrea-platform &&
+
+# Add application layer
+echo "Adding application layer..." &&
+bitbake-layers add-layer ../layers/meta-menabrea-app &&
+
+echo "All done"

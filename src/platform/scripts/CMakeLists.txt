@@ -1,0 +1,5 @@
+set(MENABREA_SCRIPT_PATH /opt)
+
+install(PROGRAMS menabrea.py DESTINATION ${MENABREA_SCRIPT_PATH})
+#install(FILES menabrea-emodp.conf DESTINATION ${MENABREA_SCRIPT_PATH})
+install(FILES platform_config.json DESTINATION ${MENABREA_SCRIPT_PATH})
