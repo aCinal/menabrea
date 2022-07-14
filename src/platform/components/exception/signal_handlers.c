@@ -433,8 +433,6 @@ static const char * GetOffendingInstruction(ucontext_t * ucontext, char * buffer
 static void PrintProcessInfo(void) {
 
     char procName[16] = "<unknown>";
-    LogPrint(ELogSeverityLevel_Critical, "%s(): Implement me!", __FUNCTION__);
-
     (void) prctl(PR_GET_NAME, procName, 0, 0, 0);
 
     LogPrint(ELogSeverityLevel_Info, "============== PROCESS INFO ==============");

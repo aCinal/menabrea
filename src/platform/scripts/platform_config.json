@@ -59,7 +59,7 @@
 
     "environment": {
         "EM_CONFIG_FILE": null,
-        "MENABREA_APP_LIST": "libmsgstress.so.1.0.0:libworkstress.so.1.0.0",
+        "MENABREA_APP_LIST": "libmsgbuffer.so.1.0.0",
         "LOG_VERBOSE": 1
     }
 }

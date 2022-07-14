@@ -9,7 +9,6 @@ extern "C" {
 #include <menabrea/workers.h>
 
 typedef u16 TMessageId;                 /**< Message identifier type */
-#define MESSAGE_INVALID EM_EVENT_UNDEF  /**< Magic value to signal message allocation failure */
 
 /**
  * @brief Create a message

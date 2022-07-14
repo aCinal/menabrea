@@ -22,5 +22,6 @@ typedef struct SMessage {
 
 void MessagingInit(em_pool_cfg_t * messagingPoolConfig);
 void MessagingTeardown(void);
+int FlushBufferedMessages(TWorkerId workerId);
 
 #endif /* PLATFORM_COMPONENTS_WORK_MESSAGING_H */

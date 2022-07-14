@@ -30,7 +30,7 @@ void LogPrint(ELogSeverityLevel severity, const char * format, ...) __attribute_
  * @brief Log a message
  * @param severity Severity level
  * @param format printf-like format string
- * @param args Variable arguments list
+ * @param args Format arguments
  */
 void LogPrintV(ELogSeverityLevel severity, const char * format, va_list args);
 

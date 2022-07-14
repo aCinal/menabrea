@@ -1,9 +1,10 @@
 
 #include <menabrea/workers.h>
 #include "work.h"
+#include "core_queue_groups.h"
 #include "worker_table.h"
 #include "messaging.h"
-#include "core_queue_groups.h"
+#include "daemon.h"
 #include <menabrea/exception.h>
 #include <menabrea/log.h>
 #include <menabrea/common.h>
@@ -22,6 +23,7 @@ void WorkInit(SWorkConfig * config) {
     SetUpQueueGroups();
     WorkerTableInit(config->GlobalWorkerId);
     MessagingInit(&config->MessagingPoolConfig);
+    DeployDaemon();
     LogPrint(ELogSeverityLevel_Debug, "%s(): Workers framework initialized successfully", __FUNCTION__);
 }
 
@@ -39,19 +41,19 @@ TWorkerId DeployWorker(const SWorkerConfig * config) {
     AssertTrue(config != NULL);
     if (unlikely(config->WorkerBody == NULL)) {
 
-        LogPrint(ELogSeverityLevel_Warning, "Attempted to register worker %s without a body function", \
+        LogPrint(ELogSeverityLevel_Warning, "Attempted to register worker '%s' without a body function", \
             config->Name);
         return WORKER_ID_INVALID;
     }
 
-    LogPrint(ELogSeverityLevel_Debug, "Deploying %s worker %s...", \
+    LogPrint(ELogSeverityLevel_Debug, "Deploying %s worker '%s'...", \
         config->Parallel ? "parallel" : "atomic", config->Name);
 
     /* Reserve the context */
     SWorkerContext * context = ReserveWorkerContext(config->WorkerId);
     if (unlikely(context == NULL)) {
 
-        LogPrint(ELogSeverityLevel_Error, "Failed to reserve context for worker %s", \
+        LogPrint(ELogSeverityLevel_Error, "Failed to reserve context for worker '%s'", \
             config->Name);
         return WORKER_ID_INVALID;
     }
@@ -79,7 +81,7 @@ TWorkerId DeployWorker(const SWorkerConfig * config) {
 
     if (unlikely(eo == EM_EO_UNDEF)) {
 
-        LogPrint(ELogSeverityLevel_Error, "Failed to create execution object for worker %s", \
+        LogPrint(ELogSeverityLevel_Error, "Failed to create execution object for worker '%s'", \
             context->Name);
         ReleaseWorkerContext(context->WorkerId);
         return WORKER_ID_INVALID;
@@ -96,7 +98,7 @@ TWorkerId DeployWorker(const SWorkerConfig * config) {
 
     if (unlikely(queue == EM_QUEUE_UNDEF)) {
 
-        LogPrint(ELogSeverityLevel_Error, "Failed to create queue for worker %s", \
+        LogPrint(ELogSeverityLevel_Error, "Failed to create queue for worker '%s'", \
             context->Name);
         ReleaseWorkerContext(context->WorkerId);
         (void) em_eo_delete(eo);
@@ -111,7 +113,7 @@ TWorkerId DeployWorker(const SWorkerConfig * config) {
     /* Start the EO */
     if (unlikely(EM_OK != em_eo_start(eo, NULL, NULL, 0, NULL))) {
 
-        LogPrint(ELogSeverityLevel_Error, "Failed to start the EO of worker %s (queue: %" PRI_QUEUE ", eo: %" PRI_EO ")", \
+        LogPrint(ELogSeverityLevel_Error, "Failed to start the EO of worker '%s' (queue: %" PRI_QUEUE ", eo: %" PRI_EO ")", \
             context->Name, context->Queue, context->Eo);
         ReleaseWorkerContext(context->WorkerId);
         /* Starting from EM-ODP v1.2.3 em_eo_delete() should remove all the remaining queues and
@@ -120,11 +122,12 @@ TWorkerId DeployWorker(const SWorkerConfig * config) {
         return WORKER_ID_INVALID;
     }
 
-    /* If we are here, global init succeeded - note that local (per-core) inits are not allowed to fail, i.e. the worker is now online */
-    MarkDeploymentSuccessful(context->WorkerId);
+    /* If we are here, then global init succeeded and note that local (per-core) inits
+     * cannot fail. Sending messages to the worker's EM queue will not be possible,
+     * however, until all local inits complete. The platform shall buffer any messages
+     * sent from now on and when the last local init completes, the platform daemon
+     * shall flush this buffer. */
 
-    LogPrint(ELogSeverityLevel_Debug, "Successfully deployed %s worker %s (id: 0x%x: queue: %" PRI_QUEUE ", eo: %" PRI_EO ", mask: 0x%x)", \
-        context->Parallel ? "parallel" : "atomic", context->Name, context->WorkerId, context->Queue, context->Eo, context->CoreMask);
     return context->WorkerId;
 }
 
@@ -244,6 +247,7 @@ static em_status_t WorkerEoStart(void * eoCtx, em_eo_t eo, const em_eo_conf_t * 
 static em_status_t WorkerEoLocalStart(void * eoCtx, em_eo_t eo) {
 
     SWorkerContext * context = (SWorkerContext *) eoCtx;
+
     int core = em_core_id();
     /* Check if the worker has been deployed to the current core - only
      * run user-defined init callback on the relevant cores that will
@@ -257,6 +261,17 @@ static em_status_t WorkerEoLocalStart(void * eoCtx, em_eo_t eo) {
          * address spaces look the same, i.e. the user library is loaded before
          * the fork. */
         context->UserLocalInit(core);
+    }
+
+    int cores = em_core_count();
+    env_atomic64_inc(&context->LocalInitsCompleted);
+    if (cores == env_atomic64_get(&context->LocalInitsCompleted)) {
+
+        /* Local inits all done - request worker deployment completion by the
+         * platform daemon. Note that the platform daemon will busy wait (if
+         * needed) until this EO changes state to EM_EO_STATE_RUNNING and only
+         * then will mark the worker as deployed. */
+        RequestDeploymentCompletion();
     }
 
     return EM_OK;
@@ -310,7 +325,6 @@ static void WorkerEoReceive(void * eoCtx, em_event_t event, em_event_type_t type
     (void) qCtx;
 
     /* TODO: Add statistics/profiling here (under spinlock as the worker may be parallel) */
-
 
     AssertTrue(context->WorkerBody != NULL);
     /* Pass the event to the user-provided handler */

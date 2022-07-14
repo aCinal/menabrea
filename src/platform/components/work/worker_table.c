@@ -42,6 +42,10 @@ void WorkerTableInit(TWorkerId globalWorkerId) {
 
         s_workerTable[i] = (SWorkerContext *)((u8*) tableBase + i * entrySize);
         env_spinlock_init(&s_workerTable[i]->Lock);
+        /* Do the init once and then only reset the value to 0 in the
+         * 'ResetContext' for portability despite the fact that all
+         * env_atomic64_init does is set the value to 0. */
+        env_atomic64_init(&s_workerTable[i]->LocalInitsCompleted);
         ResetContext(s_workerTable[i]);
     }
 }
@@ -139,14 +143,14 @@ SWorkerContext * FetchWorkerContext(TWorkerId workerId) {
 
 void MarkDeploymentSuccessful(TWorkerId workerId) {
 
-    LockWorkerTableEntry(workerId);
+    /* Caller must ensure synchronization */
+
     /* Use the local part to index the table */
     TWorkerId localId = WorkerIdGetLocal(workerId);
     AssertTrue(localId < MAX_WORKER_COUNT);
     /* Assert deployment in progress */
     AssertTrue(s_workerTable[localId]->State == EWorkerState_Deploying);
     s_workerTable[localId]->State = EWorkerState_Active;
-    UnlockWorkerTableEntry(workerId);
 }
 
 void MarkTeardownInProgress(TWorkerId workerId) {
@@ -191,24 +195,35 @@ TWorkerId MakeWorkerIdGlobal(TWorkerId localId) {
 
 static void ResetContext(SWorkerContext * context) {
 
-    /* Do this field by field to not break the spinlock accidentally */
-
-    /* Most importantly reset the state */
+    /* Reset the state */
     context->State = EWorkerState_Inactive;
+    /* Clear user callbacks */
     context->UserInit = NULL;
     context->UserLocalInit = NULL;
     context->UserLocalExit = NULL;
     context->UserExit = NULL;
     context->WorkerBody = NULL;
+
+    /* Clear internal data */
     (void) memset(context->Name, 0, sizeof(context->Name));
     context->CoreMask = 0;
     context->Parallel = false;
     context->Queue = EM_QUEUE_UNDEF;
     context->Eo = EM_EO_UNDEF;
     context->WorkerId = WORKER_ID_INVALID;
+
+    /* Reset the init completions counter */
+    env_atomic64_set(&context->LocalInitsCompleted, 0);
+
     /* Clear application private data */
     for (int i = 0; i < em_core_count(); i++) {
 
         context->Private[i] = NULL;
+    }
+
+    /* Clear event buffer */
+    for (int i = 0; i < MESSAGE_BUFFER_LENGTH; i++) {
+
+        context->MessageBuffer[i] = MESSAGE_INVALID;
     }
 }

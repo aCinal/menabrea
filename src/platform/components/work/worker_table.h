@@ -6,7 +6,8 @@
 #include <menabrea/workers.h>
 #include <event_machine.h>
 
-#define MAX_WORKER_NAME_LEN  EM_EO_NAME_LEN
+#define MAX_WORKER_NAME_LEN    EM_EO_NAME_LEN  /**< Maximum length of the worker's name */
+#define MESSAGE_BUFFER_LENGTH  16              /**< Maximum number of messages buffered by the platform per worker */
 
 typedef enum EWorkerState {
     EWorkerState_Inactive = 0,
@@ -21,6 +22,8 @@ typedef struct SWorkerContext {
     TUserLocalExitCallback UserLocalExit;
     TUserExitCallback UserExit;
     TUserHandlerCallback WorkerBody;
+    env_atomic64_t LocalInitsCompleted;
+    TMessage MessageBuffer[MESSAGE_BUFFER_LENGTH];
     char Name[MAX_WORKER_NAME_LEN];
     int CoreMask;
     bool Parallel;

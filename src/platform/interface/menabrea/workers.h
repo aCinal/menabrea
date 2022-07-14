@@ -11,6 +11,7 @@ extern "C" {
 
 typedef u16 TWorkerId;                                       /**< Worker identifier type */
 typedef em_event_t TMessage;                                 /**< Opaque message handle */
+#define MESSAGE_INVALID EM_EVENT_UNDEF                       /**< Magic value to signal message allocation failure */
 
 #define WORKER_ID_INVALID       ( (TWorkerId) 0xFFFF )       /**< Magic value used to indicate worker deployment failure and request to allocate ID dynamically */
 #define WORKER_ID_DYNAMIC_BASE  ( (TWorkerId) 0x07FF )       /**< Boundary value between static worker ID pool and dynamic allocation pool */

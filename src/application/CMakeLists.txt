@@ -9,4 +9,5 @@ add_compile_definitions(PRIVATE ENV_64_BIT)
 
 add_subdirectory(messaging_stress_test)
 add_subdirectory(local_data_test)
-add_subdirectory(workers_stress_test)
+add_subdirectory(deploy_ring_test)
+add_subdirectory(message_buffering_test)

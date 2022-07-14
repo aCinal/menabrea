@@ -80,17 +80,51 @@ void DestroyMessage(TMessage message) {
 
 void SendMessage(TMessage message, TWorkerId receiver) {
 
+    AssertTrue(receiver != WORKER_ID_INVALID);
+
     em_eo_t self = em_eo_current();
-    /* Do not allow calling this function from a non-EO context */
-    AssertTrue(self != EM_EO_UNDEF);
-    SWorkerContext * context = (SWorkerContext *) em_eo_get_context(self);
+
     /* Access the message based on the descriptor (event) */
     SMessage * msgData = (SMessage *) em_event_pointer(message);
-    /* Set the sender based on the current context */
-    msgData->Header.Sender = context->WorkerId;
+
+    if (self != EM_EO_UNDEF) {
+
+        SWorkerContext * context = (SWorkerContext *) em_eo_get_context(self);
+        /* Set the sender based on the current context */
+        msgData->Header.Sender = context->WorkerId;
+
+    } else {
+
+        /* Allow sending a message from a non-EO context */
+        msgData->Header.Sender = WORKER_ID_INVALID;
+    }
     msgData->Header.Receiver = receiver;
 
     RouteMessage(message);
+}
+
+int FlushBufferedMessages(TWorkerId workerId) {
+
+    /* Caller must ensure synchronization */
+
+    int dropped = 0;
+    SWorkerContext * context = FetchWorkerContext(workerId);
+    /* Assert this function only gets called when the worker is
+     * starting up */
+    AssertTrue(context->State == EWorkerState_Deploying);
+
+    for (int i = 0; i < MESSAGE_BUFFER_LENGTH && context->MessageBuffer[i] != MESSAGE_INVALID; i++) {
+
+        TMessage message = context->MessageBuffer[i];
+        if (unlikely(EM_OK != em_send(message, context->Queue))) {
+
+            dropped++;
+            DestroyMessage(message);
+        }
+        context->MessageBuffer[i] = MESSAGE_INVALID;
+    }
+
+    return dropped;
 }
 
 static void PrintPoolConfig(em_pool_cfg_t * config) {
@@ -117,8 +151,10 @@ static void RouteMessage(TMessage message) {
         /* Lock the entry to ensure the queue is still valid when em_send() gets called */
         LockWorkerTableEntry(receiver);
         SWorkerContext * receiverContext = FetchWorkerContext(receiver);
-        if (receiverContext->State == EWorkerState_Active) {
-
+        EWorkerState state = receiverContext->State;
+        switch (state) {
+        case EWorkerState_Active:
+            /* Worker active - push the message to the EM queue */
             if (unlikely(EM_OK != em_send(message, receiverContext->Queue))) {
 
                 UnlockWorkerTableEntry(receiver);
@@ -129,14 +165,37 @@ static void RouteMessage(TMessage message) {
                 return;
             }
             UnlockWorkerTableEntry(receiver);
+            break;
 
-        } else {
+        case EWorkerState_Deploying:
+            /* Worker still starting up - buffer the message */
 
-            EWorkerState state = receiverContext->State;
+            /* Search the worker's event buffer for a free slot */
+            for (int i = 0; i < MESSAGE_BUFFER_LENGTH; i++) {
+
+                if (receiverContext->MessageBuffer[i] == EM_EVENT_UNDEF) {
+
+                    /* Free slot found, save the message and return */
+                    receiverContext->MessageBuffer[i] = message;
+                    UnlockWorkerTableEntry(receiver);
+                    return;
+                }
+            }
+
+            /* Failed to find a free slot, drop the message */
+            UnlockWorkerTableEntry(receiver);
+            LogPrint(ELogSeverityLevel_Warning, "Failed to send message 0x%x (sender: 0x%x, receiver: 0x%x)" \
+                " - deployment not yet complete and the message buffer is full", \
+                GetMessageId(message), GetMessageSender(message), GetMessageReceiver(message));
+            DestroyMessage(message);
+            break;
+
+        default:
             UnlockWorkerTableEntry(receiver);
             LogPrint(ELogSeverityLevel_Warning, "Failed to send message 0x%x (sender: 0x%x, receiver: 0x%x) - invalid receiver state: %d", \
                 GetMessageId(message), GetMessageSender(message), GetMessageReceiver(message), state);
             DestroyMessage(message);
+            break;
         }
 
     } else {
