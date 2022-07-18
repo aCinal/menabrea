@@ -1,9 +1,9 @@
 
 #include "core_queue_groups.h"
-#include <event_machine/platform/env/environment.h>
 #include <menabrea/log.h>
 #include <menabrea/exception.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 typedef struct SCoreGroups {
     int Count;
@@ -20,7 +20,7 @@ void SetUpQueueGroups(void) {
     int groupCount = (1 << cores) - 1;
     LogPrint(ELogSeverityLevel_Info, "%s(): Setting up %d queue groups...", \
         __FUNCTION__, groupCount);
-    s_coreGroups = env_shared_malloc(sizeof(SCoreGroups) + groupCount * sizeof(em_queue_group_t));
+    s_coreGroups = malloc(sizeof(SCoreGroups) + groupCount * sizeof(em_queue_group_t));
     AssertTrue(s_coreGroups != NULL);
 
     s_coreGroups->Count = groupCount;
@@ -60,8 +60,7 @@ void TearDownQueueGroups(void) {
             AssertTrue(EM_OK == em_queue_group_delete(s_coreGroups->Groups[i], 0, NULL));
         }
 
-        /* Free the shared memory */
-        env_shared_free(s_coreGroups);
+        free(s_coreGroups);
         s_coreGroups = NULL;
     }
 }
