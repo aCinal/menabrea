@@ -211,6 +211,7 @@ static void ResetContext(SWorkerContext * context) {
     context->Queue = EM_QUEUE_UNDEF;
     context->Eo = EM_EO_UNDEF;
     context->WorkerId = WORKER_ID_INVALID;
+    context->TerminationRequested = false;
 
     /* Reset the init completions counter */
     env_atomic64_set(&context->LocalInitsCompleted, 0);

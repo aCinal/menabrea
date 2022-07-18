@@ -152,9 +152,10 @@ static inline TWorkerId DeploySimpleParallelWorker(const char * name, TWorkerId 
 
 /**
  * @brief Terminate a worker
- * @param workerId Worker ID of the worker to terminate
- * @warning This function must not be called in the user init functions to terminate the worker that is being initialized
- * @see TUserInitCallback, TUserLocalInitCallback
+ * @param workerId Worker ID of the worker to terminate or WORKER_ID_INVALID to terminate current worker
+ * @note Once this function is called the worker will not receive any new messages, but is allowed to
+ *       continue sending messages and using platform APIs until the current function returns
+ * @see WORKER_ID_INVALID
  */
 void TerminateWorker(TWorkerId workerId);
 

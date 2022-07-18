@@ -118,10 +118,30 @@ int FlushBufferedMessages(TWorkerId workerId) {
         TMessage message = context->MessageBuffer[i];
         if (unlikely(EM_OK != em_send(message, context->Queue))) {
 
-            dropped++;
             DestroyMessage(message);
+            dropped++;
         }
         context->MessageBuffer[i] = MESSAGE_INVALID;
+    }
+
+    return dropped;
+}
+
+int DropBufferedMessages(TWorkerId workerId) {
+
+    /* Caller must ensure synchronization */
+
+    int dropped = 0;
+    SWorkerContext * context = FetchWorkerContext(workerId);
+    /* Assert this function only gets called when the worker is
+     * starting up */
+    AssertTrue(context->State == EWorkerState_Deploying);
+
+    for (int i = 0; i < MESSAGE_BUFFER_LENGTH && context->MessageBuffer[i] != MESSAGE_INVALID; i++) {
+
+        DestroyMessage(context->MessageBuffer[i]);
+        context->MessageBuffer[i] = MESSAGE_INVALID;
+        dropped++;
     }
 
     return dropped;

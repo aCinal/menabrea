@@ -27,6 +27,7 @@ typedef struct SWorkerContext {
     char Name[MAX_WORKER_NAME_LEN];
     int CoreMask;
     bool Parallel;
+    bool TerminationRequested;
     EWorkerState State;
     TWorkerId WorkerId;
     em_queue_t Queue;

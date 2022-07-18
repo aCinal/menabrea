@@ -133,28 +133,57 @@ TWorkerId DeployWorker(const SWorkerConfig * config) {
 
 void TerminateWorker(TWorkerId workerId) {
 
-    LogPrint(ELogSeverityLevel_Info, "Terminating worker 0x%x...", workerId);
+    /* If called with WORKER_ID_INVALID, terminate current worker */
+    TWorkerId realId = workerId == WORKER_ID_INVALID ? GetOwnWorkerId() : workerId;
 
-    LockWorkerTableEntry(workerId);
-    SWorkerContext * context = FetchWorkerContext(workerId);
+    LogPrint(ELogSeverityLevel_Info, "Terminating worker 0x%x...", realId);
 
-    if (context->State == EWorkerState_Active) {
+    LockWorkerTableEntry(realId);
+    SWorkerContext * context = FetchWorkerContext(realId);
 
-        /* Sanity-check internal consistency */
-        AssertTrue(workerId == context->WorkerId);
+    /* Sanity-check internal consistency */
+    AssertTrue(realId == context->WorkerId);
+
+    EWorkerState state = context->State;
+    switch (state) {
+    case EWorkerState_Active:
+
+        /* Worker active, can terminate it immediately */
 
         /* Mark the worker as terminating - the context will be released in the
          * EO stop callback */
-        MarkTeardownInProgress(workerId);
+        MarkTeardownInProgress(realId);
         AssertTrue(EM_OK == em_eo_stop(context->Eo, 0, NULL));
-        UnlockWorkerTableEntry(workerId);
+        UnlockWorkerTableEntry(realId);
+        break;
 
-    } else {
+    case EWorkerState_Deploying:
 
-        EWorkerState state = context->State;
-        UnlockWorkerTableEntry(workerId);
+        /* Worker deployment still in progress. Defer termination to the platform
+         * daemon. */
+
+        if (!context->TerminationRequested) {
+
+            context->TerminationRequested = true;
+            UnlockWorkerTableEntry(realId);
+
+        } else {
+
+            UnlockWorkerTableEntry(realId);
+            /* Termination requested flag was already set */
+            LogPrint(ELogSeverityLevel_Warning, "Worker 0x%x's termination already requested", \
+                realId);
+        }
+        break;
+
+    default:
+
+        /* Worker in invalid state */
+
+        UnlockWorkerTableEntry(realId);
         LogPrint(ELogSeverityLevel_Warning, "%s(): Worker 0x%x in invalid state: %d", \
-            __FUNCTION__, workerId, state);
+            __FUNCTION__, realId, state);
+        break;
     }
 }
 

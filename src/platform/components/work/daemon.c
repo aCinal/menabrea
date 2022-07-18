@@ -135,7 +135,6 @@ static void DaemonEoReceive(void * eoCtx, em_event_t event, em_event_type_t type
 static void HandleRequest(TMessage request) {
 
     switch (GetMessageId(request)) {
-
     case DAEMON_REQUEST_COMPLETE_DEPLOYMENT:
         HandleRequestCompleteDeployment(request);
         break;
@@ -150,11 +149,11 @@ static void HandleRequestCompleteDeployment(TMessage request) {
 
     TWorkerId sender = GetMessageSender(request);
 
+    /* Destroy the request message as soon as possible, we don't need it anymore */
+    DestroyMessage(request);
+
     LogPrint(ELogSeverityLevel_Debug, "Daemon handling deployment completion request from 0x%x", \
         sender);
-
-    /* This request should have been sent from the worker's EO final
-     * local init */
 
     LockWorkerTableEntry(sender);
     SWorkerContext * context = FetchWorkerContext(sender);
@@ -166,27 +165,66 @@ static void HandleRequestCompleteDeployment(TMessage request) {
      * state of the sender is not yet EWorkerState_Active (no
      * risk of a race condition). */
 
-    /* Busy wait for the EO's last init to complete if we
+    /* This request should have been sent from the worker's EO final
+     * local init - busy wait for this last init to complete if we
      * were scheduled on a different core in parallel */
     while (em_eo_get_state(eo) == EM_EO_STATE_STARTING) {
         ;
     }
-    /* EO now running and its queues have been enabled,
-     * flush any messages buffered by platform */
-    int dropped = FlushBufferedMessages(sender);
-    /* Deployment complete */
-    MarkDeploymentSuccessful(sender);
-    UnlockWorkerTableEntry(sender);
 
-    /* Destroy the request message */
-    DestroyMessage(request);
+    int messagesDropped;
+    /* Save the termination pending flag on stack so as to not use the context anymore
+     * after calling em_eo_stop() (in case termination has been requested) and releasing the
+     * lock, even though in the current implementation it would be perfectly safe as the
+     * context does not get released until local EO stop completes on all cores - current
+     * core included. */
+    bool terminationPending = context->TerminationRequested;
+    if (!terminationPending) {
 
-    if (unlikely(dropped)) {
+        /* EO now running and its queues have been enabled,
+         * flush any messages buffered by platform */
+        messagesDropped = FlushBufferedMessages(sender);
 
-        LogPrint(ELogSeverityLevel_Error, "Failed to send %d messages when flushing worker 0x%x's buffer", \
-            dropped, sender);
+        /* Deployment complete */
+        MarkDeploymentSuccessful(sender);
+
+    } else {
+
+        /* Termination requested during startup and now pending. Drop
+         * any messages buffered to avoid unnecessary errors from EM
+         * if we tried to call em_send() for each of them (or a leak
+         * if we did nothing). */
+        messagesDropped = DropBufferedMessages(sender);
+
+        /* Complete deployment to have a valid state transition and
+         * start teardown immediately. Note that we cannot call
+         * TerminateWorker because we hold the lock. */
+        MarkDeploymentSuccessful(sender);
+        MarkTeardownInProgress(sender);
+        /* Stop the EO - context will be released in the EO stop
+         * callback */
+        AssertTrue(EM_OK == em_eo_stop(context->Eo, 0, NULL));
     }
 
-    LogPrint(ELogSeverityLevel_Info, "Successfully deployed worker 0x%x (eo: %" PRI_EO ", queue: %" PRI_QUEUE ")", \
-        sender, eo, queue);
+    UnlockWorkerTableEntry(sender);
+
+    if (terminationPending) {
+
+        /* Worker deployed and immediately terminated */
+        LogPrint(ELogSeverityLevel_Info, "Worker 0x%x's termination requested while still deploying and now in progress. Dropped %d message(s)", \
+            sender, messagesDropped);
+
+    } else {
+
+        /* Deployment successful */
+        LogPrint(ELogSeverityLevel_Info, "Successfully deployed worker 0x%x (eo: %" PRI_EO ", queue: %" PRI_QUEUE ")", \
+            sender, eo, queue);
+
+        /* Log any message drops - note that an EM log should also be present for each failed em_send() call */
+        if (unlikely(messagesDropped)) {
+
+            LogPrint(ELogSeverityLevel_Error, "Failed to send %d message(s) when flushing worker 0x%x's buffer", \
+                messagesDropped, sender);
+        }
+    }
 }
