@@ -264,8 +264,8 @@ static em_status_t WorkerEoLocalStart(void * eoCtx, em_eo_t eo) {
     }
 
     int cores = em_core_count();
-    env_atomic64_inc(&context->LocalInitsCompleted);
-    if (cores == env_atomic64_get(&context->LocalInitsCompleted)) {
+    int initsCompleted = env_atomic64_add_return(&context->LocalInitsCompleted, 1);
+    if (initsCompleted == cores) {
 
         /* Local inits all done - request worker deployment completion by the
          * platform daemon. Note that the platform daemon will busy wait (if
