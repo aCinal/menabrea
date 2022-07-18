@@ -8,14 +8,15 @@ extern "C" {
 
 #include <stdarg.h>
 
+/** @brief Log severity level */
 typedef enum ELogSeverityLevel {
-    ELogSeverityLevel_Critical = 0,
-    ELogSeverityLevel_Error,
-    ELogSeverityLevel_Warning,
-    ELogSeverityLevel_Info,
-    ELogSeverityLevel_Debug,
+    ELogSeverityLevel_Critical = 0,  /**< Critical log */
+    ELogSeverityLevel_Error,         /**< Error log */
+    ELogSeverityLevel_Warning,       /**< Warning log */
+    ELogSeverityLevel_Info,          /**< Info log */
+    ELogSeverityLevel_Debug,         /**< Debug log (not printed unless in verbose mode) */
 
-    ELogSeverityLevel_NumberOf,
+    ELogSeverityLevel_NumberOf,      /**< Number of valid enum values */
 } ELogSeverityLevel;
 
 /**
