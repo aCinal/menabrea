@@ -1,6 +1,6 @@
 set(SOURCES
+    completion_daemon.c
     core_queue_groups.c
-    daemon.c
     messaging.c
     worker_table.c
     workers.c

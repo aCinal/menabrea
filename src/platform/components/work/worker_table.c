@@ -42,10 +42,6 @@ void WorkerTableInit(TWorkerId globalWorkerId) {
 
         s_workerTable[i] = (SWorkerContext *)((u8*) tableBase + i * entrySize);
         env_spinlock_init(&s_workerTable[i]->Lock);
-        /* Do the init once and then only reset the value to 0 in the
-         * 'ResetContext' for portability despite the fact that all
-         * env_atomic64_init does is set the value to 0. */
-        env_atomic64_init(&s_workerTable[i]->LocalInitsCompleted);
         ResetContext(s_workerTable[i]);
     }
 }
@@ -212,9 +208,6 @@ static void ResetContext(SWorkerContext * context) {
     context->Eo = EM_EO_UNDEF;
     context->WorkerId = WORKER_ID_INVALID;
     context->TerminationRequested = false;
-
-    /* Reset the init completions counter */
-    env_atomic64_set(&context->LocalInitsCompleted, 0);
 
     /* Clear application private data */
     for (int i = 0; i < em_core_count(); i++) {

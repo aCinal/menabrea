@@ -4,7 +4,7 @@
 #include "core_queue_groups.h"
 #include "worker_table.h"
 #include "messaging.h"
-#include "daemon.h"
+#include "completion_daemon.h"
 #include <menabrea/exception.h>
 #include <menabrea/log.h>
 #include <menabrea/common.h>
@@ -23,13 +23,14 @@ void WorkInit(SWorkConfig * config) {
     SetUpQueueGroups();
     WorkerTableInit(config->GlobalWorkerId);
     MessagingInit(&config->MessagingPoolConfig);
-    DeployDaemon();
+    DeployCompletionDaemon();
     LogPrint(ELogSeverityLevel_Debug, "%s(): Workers framework initialized successfully", __FUNCTION__);
 }
 
 void WorkTeardown(void) {
 
     LogPrint(ELogSeverityLevel_Debug, "%s(): Workers framework teardown started", __FUNCTION__);
+    CompletionDaemonTeardown();
     WorkerTableTeardown();
     MessagingTeardown();
     TearDownQueueGroups();
@@ -68,6 +69,20 @@ TWorkerId DeployWorker(const SWorkerConfig * config) {
     context->CoreMask = config->CoreMask;
     context->Parallel = config->Parallel;
 
+    /* Create the notification event */
+    em_event_t notifEvent = em_alloc(sizeof(TWorkerId), EM_EVENT_TYPE_SW, EM_POOL_DEFAULT);
+    if (unlikely(notifEvent == EM_EVENT_UNDEF)) {
+
+        LogPrint(ELogSeverityLevel_Error, "Failed to allocate a notification event when deploying worker '%s'", \
+            context->Name);
+        ReleaseWorkerContext(context->WorkerId);
+        return WORKER_ID_INVALID;
+    }
+
+    /* Set the worker ID as payload of the notification event */
+    TWorkerId * notifPayload = (TWorkerId *) em_event_pointer(notifEvent);
+    *notifPayload = context->WorkerId;
+
     /* Create the EO */
     em_eo_t eo = em_eo_create(
         context->Name,
@@ -83,6 +98,7 @@ TWorkerId DeployWorker(const SWorkerConfig * config) {
 
         LogPrint(ELogSeverityLevel_Error, "Failed to create execution object for worker '%s'", \
             context->Name);
+        em_free(notifEvent);
         ReleaseWorkerContext(context->WorkerId);
         return WORKER_ID_INVALID;
     }
@@ -100,6 +116,7 @@ TWorkerId DeployWorker(const SWorkerConfig * config) {
 
         LogPrint(ELogSeverityLevel_Error, "Failed to create queue for worker '%s'", \
             context->Name);
+        em_free(notifEvent);
         ReleaseWorkerContext(context->WorkerId);
         (void) em_eo_delete(eo);
         return WORKER_ID_INVALID;
@@ -110,11 +127,20 @@ TWorkerId DeployWorker(const SWorkerConfig * config) {
     context->Eo = eo;
     context->Queue = queue;
 
+    /* Prepare a notification that will be delivered to the completion daemon
+     * once EO initialization completes on all cores */
+    em_notif_t notif = {
+        .event = notifEvent,
+        .queue = GetCompletionDaemonQueue(),
+        .egroup = EM_EVENT_GROUP_UNDEF
+    };
+
     /* Start the EO */
-    if (unlikely(EM_OK != em_eo_start(eo, NULL, NULL, 0, NULL))) {
+    if (unlikely(EM_OK != em_eo_start(eo, NULL, NULL, 1, &notif))) {
 
         LogPrint(ELogSeverityLevel_Error, "Failed to start the EO of worker '%s' (queue: %" PRI_QUEUE ", eo: %" PRI_EO ")", \
             context->Name, context->Queue, context->Eo);
+        em_free(notifEvent);
         ReleaseWorkerContext(context->WorkerId);
         /* Starting from EM-ODP v1.2.3 em_eo_delete() should remove all the remaining queues and
          * delete them before deleting the actual EO */
@@ -290,17 +316,6 @@ static em_status_t WorkerEoLocalStart(void * eoCtx, em_eo_t eo) {
          * address spaces look the same, i.e. the user library is loaded before
          * the fork. */
         context->UserLocalInit(core);
-    }
-
-    int cores = em_core_count();
-    int initsCompleted = env_atomic64_add_return(&context->LocalInitsCompleted, 1);
-    if (initsCompleted == cores) {
-
-        /* Local inits all done - request worker deployment completion by the
-         * platform daemon. Note that the platform daemon will busy wait (if
-         * needed) until this EO changes state to EM_EO_STATE_RUNNING and only
-         * then will mark the worker as deployed. */
-        RequestDeploymentCompletion();
     }
 
     return EM_OK;
