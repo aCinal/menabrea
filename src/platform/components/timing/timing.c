@@ -10,6 +10,7 @@
 #include <event_machine/add-ons/event_machine_timer.h>
 #include <event_machine.h>
 
+static inline void DestroyAllTimers(void);
 static inline em_timer_tick_t MicrosecondsToTicks(u64 us);
 
 static em_timer_t s_timerInstance = EM_TIMER_UNDEF;
@@ -34,7 +35,7 @@ void TimingInit(void) {
 
 void TimingTeardown(void) {
 
-    /* TODO: Cancel any active timeouts */
+    DestroyAllTimers();
 
     TimerTableTeardown();
     AssertTrue(EM_OK == em_timer_delete(s_timerInstance));
@@ -48,7 +49,7 @@ TTimerId CreateTimer(TMessage message, TWorkerId receiver, u64 expires, u64 peri
     LogPrint(ELogSeverityLevel_Debug, "Creating %s timer with message 0x%x to 0x%x...", \
         period > 0 ? "periodic" : "one-shot", GetMessageId(message), receiver);
 
-    /* Allocate a timer context */
+    /* Reserve the context */
     STimerContext * context = ReserveTimerContext();
     if (unlikely(context == NULL)) {
 
@@ -95,6 +96,8 @@ TTimerId CreateTimer(TMessage message, TWorkerId receiver, u64 expires, u64 peri
 
     /* Arm the timer */
     em_status_t status;
+    /* Do the state transition before actually arming the timeout to avoid
+     * a race condition where the timer expires before we change the state */
     context->State = ETimerState_Armed;
     if (period > 0) {
 
@@ -110,7 +113,7 @@ TTimerId CreateTimer(TMessage message, TWorkerId receiver, u64 expires, u64 peri
 
     } else {
 
-        /* Arm one-shot timer - use em_tmo_set_rel() API that uses relative value
+        /* Arm one-shot timer - use em_tmo_set_rel() API which uses relative value
          * of the timeout */
         status = em_tmo_set_rel(
             context->Tmo,
@@ -168,6 +171,8 @@ void DestroyTimer(TTimerId timerId) {
             /* This time no event can be returned (we just freed the timeout
              * event when cancelling) */
             AssertTrue(currentEvent == EM_EVENT_UNDEF);
+            LogPrint(ELogSeverityLevel_Debug, "%s(): Successfully destroyed timer 0x%x", \
+                __FUNCTION__, timerId);
             break;
 
         case EM_ERR_BAD_STATE:
@@ -195,7 +200,7 @@ void DestroyTimer(TTimerId timerId) {
 
     case ETimerState_Expired:
         /* One-shot timer already expired (handled by the timing daemon) - can be
-         * safely cancelled */
+         * safely deleted */
 
         /* Destroy the message */
         DestroyMessage(context->Message);
@@ -208,6 +213,8 @@ void DestroyTimer(TTimerId timerId) {
         AssertTrue(EM_OK == em_tmo_delete(tmo, &currentEvent));
         /* Timer expired - no event should be pending */
         AssertTrue(currentEvent == EM_EVENT_UNDEF);
+        LogPrint(ELogSeverityLevel_Debug, "%s(): Successfully cleaned up expired timer 0x%x", \
+            __FUNCTION__, timerId);
         break;
 
     default:
@@ -217,6 +224,20 @@ void DestroyTimer(TTimerId timerId) {
         LogPrint(ELogSeverityLevel_Warning, "%s(): Timer 0x%x in invalid state: %d", \
             __FUNCTION__, timerId, state);
         break;
+    }
+}
+
+static inline void DestroyAllTimers(void) {
+
+    LogPrint(ELogSeverityLevel_Debug, "Destroying all remaining timers...");
+
+    for (TTimerId i = 0; i < MAX_TIMER_COUNT; i++) {
+
+        STimerContext * context = FetchTimerContext(i);
+        if (context->State == ETimerState_Armed || context->State == ETimerState_Expired) {
+
+            DestroyTimer(i);
+        }
     }
 }
 

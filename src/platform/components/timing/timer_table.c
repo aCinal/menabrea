@@ -99,7 +99,9 @@ void UnlockTimerTableEntry(TTimerId timerId) {
 
 static void ResetContext(STimerContext * context) {
 
+    context->Tmo = EM_TMO_UNDEF;
     context->Message = MESSAGE_INVALID;
     context->Receiver = WORKER_ID_INVALID;
     context->Period = 0;
+    context->State = ETimerState_Inactive;
 }

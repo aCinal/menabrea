@@ -84,4 +84,26 @@ static void WorkerBody(TMessage message) {
         DestroyTimer(timer);
         LogPrint(ELogSeverityLevel_Info, "New timer destroyed");
     }
+
+
+    TMessage longRunnerMessage = CreateMessage(0xBEEF, 0);
+    if (unlikely(longRunnerMessage == MESSAGE_INVALID)) {
+
+        LogPrint(ELogSeverityLevel_Error, "Failed to allocate the long-runner timer's message");
+
+    } else {
+
+        LogPrint(ELogSeverityLevel_Info, "Creating a long-running timer...");
+        /* Create a long-running timer and lose reference to it so that it will
+         * need to be cleaned up by the platform */
+        TTimerId longRunner = CreateTimer(longRunnerMessage, GetOwnWorkerId(), 600 * 1000 * 1000, 0);
+        if (unlikely(longRunner == TIMER_ID_INVALID)) {
+
+            LogPrint(ELogSeverityLevel_Error, "Failed to create the long-running timer");
+
+        } else {
+
+            LogPrint(ELogSeverityLevel_Info, "Timer created");
+        }
+    }
 }
