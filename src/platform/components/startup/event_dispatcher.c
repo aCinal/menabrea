@@ -15,7 +15,6 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#define PLATFORM_SHARED_MEMORY_NAME   "platform_shmem"
 #define SYNC_DISPATCH_ROUNDS          4 * 1024
 #define EXIT_CHECK_DISPATCH_ROUNDS    4 * 1024
 #define DRAIN_DISPATCH_ROUNDS         64
@@ -44,8 +43,6 @@ typedef struct SChildren {
 } SChildren;
 
 typedef struct SStartupSharedMemory {
-    /* Handle to the platform shared memory */
-    odp_shm_t ThisShm;
     /* OpenDataPlane instance handle */
     odp_instance_t OdpInstance;
     /* Event machine configuration */
@@ -85,20 +82,16 @@ void RunEventDispatchers(SEventDispatcherConfig * config) {
     RunMainDispatcher();
 
     LogPrint(ELogSeverityLevel_Info, "%s(): Freeing platform shared memory...", __FUNCTION__);
-    AssertTrue(0 == odp_shm_free(s_platformShmem->ThisShm));
+    env_shared_free(s_platformShmem);
 }
 
 static SStartupSharedMemory * CreatePlatformSharedMemory(SEventDispatcherConfig * config) {
 
-    odp_shm_t shm = odp_shm_reserve(PLATFORM_SHARED_MEMORY_NAME, \
-        sizeof(SStartupSharedMemory), ODP_CACHE_LINE_SIZE, ODP_SHM_SINGLE_VA);
-    AssertTrue(shm != ODP_SHM_INVALID);
-
-    SStartupSharedMemory * shmPtr = odp_shm_addr(shm);
+    SStartupSharedMemory * shmPtr = \
+        (SStartupSharedMemory *) env_shared_malloc(sizeof(SStartupSharedMemory));
     AssertTrue(shmPtr != NULL);
     (void) memset(shmPtr, 0, sizeof(SStartupSharedMemory));
 
-    shmPtr->ThisShm = shm;
     shmPtr->OdpInstance = config->OdpInstance;
     shmPtr->EmConf = config->EmConf;
     shmPtr->AppLibs = config->AppLibs;
