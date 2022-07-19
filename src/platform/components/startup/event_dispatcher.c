@@ -3,6 +3,7 @@
 /* TODO: Resolve platform-internal dependencies more cleanly */
 #include "../exception/signal_handlers.h"
 #include "../work/work.h"
+#include "../timing/timing.h"
 #include <menabrea/exception.h>
 #include <menabrea/log.h>
 #include <event_machine/platform/env/environment.h>
@@ -177,6 +178,7 @@ static void RunMainDispatcher(void) {
     AssertTrue(EM_OK == em_init_core());
 
     WorkInit(&s_platformShmem->WorkConfig);
+    TimingInit();
 
     RunApplicationsGlobalInits();
     SChildren * children = ForkChildDispatchers();
@@ -192,12 +194,16 @@ static void RunMainDispatcher(void) {
     /* Wait for global exit to complete on all cores */
     ActiveSync(&s_platformShmem->CompleteGlobalAppExitCounter);
 
+
     /* Tear down any workers left behind by the application */
     TerminateAllWorkers();
 
     ActiveSync(&s_platformShmem->WaitForWorkersTeardownCounter);
 
-    /* Close up shop */
+    /* Close up shop - note that timers may continue to fire after
+     * workers have been terminated so a few send failures are
+     * expected here */
+    TimingTeardown();
     WorkTeardown();
 
     /* Dispatch lingering events and exit */

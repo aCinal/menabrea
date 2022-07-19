@@ -9,7 +9,7 @@
 static em_status_t DaemonEoStart(void * eoCtx, em_eo_t eo, const em_eo_conf_t * conf);
 static em_status_t DaemonEoStop(void * eoCtx, em_eo_t eo);
 static void DaemonEoReceive(void * eoCtx, em_event_t event, em_event_type_t type, em_queue_t queue, void * qCtx);
-static void CompleteWorkerDeployment(TWorkerId workerId);
+static inline void CompleteWorkerDeployment(TWorkerId workerId);
 
 static em_eo_t s_daemonEo = EM_EO_UNDEF;
 static em_queue_t s_daemonQueue = EM_QUEUE_UNDEF;
@@ -38,10 +38,10 @@ void DeployCompletionDaemon(void) {
     em_queue_t queue = em_queue_create(
         "platform_daemon",
         EM_QUEUE_TYPE_PARALLEL,
-        /* Give the daemon the highest priority - it will not handle
+        /* Give the completion daemon the highest priority - it will not handle
          * events often and should always be given priority. */
         EM_QUEUE_PRIO_HIGHEST,
-        MapCoreMaskToQueueGroup(0b1111),
+        MapCoreMaskToQueueGroup(GetSharedCoreMask() | GetIsolatedCoresMask()),
         NULL
     );
 
@@ -53,8 +53,8 @@ void DeployCompletionDaemon(void) {
     AssertTrue(EM_OK == em_eo_start(eo, NULL, NULL, 0, NULL));
 
     /* If we are here, daemon has been successfully deployed and is now ready to
-     * service requests. */
-    LogPrint(ELogSeverityLevel_Info, "Successfully deployed platform daemon (eo: %" PRI_EO ", queue: %" PRI_QUEUE ")", \
+     * service notifications. */
+    LogPrint(ELogSeverityLevel_Info, "Successfully deployed completion daemon (eo: %" PRI_EO ", queue: %" PRI_QUEUE ")", \
         eo, queue);
 
     s_daemonEo = eo;
@@ -110,7 +110,7 @@ static void DaemonEoReceive(void * eoCtx, em_event_t event, em_event_type_t type
     CompleteWorkerDeployment(workerId);
 }
 
-static void CompleteWorkerDeployment(TWorkerId workerId) {
+static inline void CompleteWorkerDeployment(TWorkerId workerId) {
 
     LogPrint(ELogSeverityLevel_Debug, "Daemon completing deployment of worker 0x%x", \
         workerId);
@@ -130,49 +130,16 @@ static void CompleteWorkerDeployment(TWorkerId workerId) {
      * at platform level. */
     AssertTrue(em_eo_get_state(eo) == EM_EO_STATE_RUNNING);
 
-    int messagesDropped;
-    /* Save the termination pending flag on stack so as to not use the context anymore
-     * after calling em_eo_stop() (in case termination has been requested) and releasing the
-     * lock, even though in the current implementation it would be perfectly safe as the
-     * context does not get released until local EO stop completes on all cores - current
-     * core included. */
-    bool terminationPending = context->TerminationRequested;
-    if (!terminationPending) {
+    if (!context->TerminationRequested) {
 
         /* EO now running and its queues have been enabled,
          * flush any messages buffered by platform */
-        messagesDropped = FlushBufferedMessages(workerId);
+        int messagesDropped = FlushBufferedMessages(workerId);
 
         /* Deployment complete */
         MarkDeploymentSuccessful(workerId);
 
-    } else {
-
-        /* Termination requested during startup and now pending. Drop
-         * any messages buffered to avoid unnecessary errors from EM
-         * if we tried to call em_send() for each of them (or a leak
-         * if we did nothing). */
-        messagesDropped = DropBufferedMessages(workerId);
-
-        /* Complete deployment to have a valid state transition and
-         * start teardown immediately. Note that we cannot call
-         * TerminateWorker because we hold the lock. */
-        MarkDeploymentSuccessful(workerId);
-        MarkTeardownInProgress(workerId);
-        /* Stop the EO - context will be released in the EO stop
-         * callback */
-        AssertTrue(EM_OK == em_eo_stop(eo, 0, NULL));
-    }
-
-    UnlockWorkerTableEntry(workerId);
-
-    if (terminationPending) {
-
-        /* Worker deployed and immediately terminated */
-        LogPrint(ELogSeverityLevel_Info, "Worker 0x%x's termination requested while still deploying and now in progress. Dropped %d message(s)", \
-            workerId, messagesDropped);
-
-    } else {
+        UnlockWorkerTableEntry(workerId);
 
         /* Deployment successful */
         LogPrint(ELogSeverityLevel_Info, "Successfully deployed worker 0x%x (eo: %" PRI_EO ", queue: %" PRI_QUEUE ")", \
@@ -184,5 +151,28 @@ static void CompleteWorkerDeployment(TWorkerId workerId) {
             LogPrint(ELogSeverityLevel_Error, "Failed to send %d message(s) when flushing worker 0x%x's buffer", \
                 messagesDropped, workerId);
         }
+
+    } else {
+
+        /* Termination requested during startup and now pending. Drop
+         * any messages buffered to avoid unnecessary errors from EM
+         * if we tried to call em_send() for each of them (or a leak
+         * if we did nothing). */
+        int messagesDropped = DropBufferedMessages(workerId);
+
+        /* Complete deployment to have a valid state transition and
+         * start teardown immediately. Note that we cannot call
+         * TerminateWorker because we hold the lock. */
+        MarkDeploymentSuccessful(workerId);
+        MarkTeardownInProgress(workerId);
+        /* Stop the EO - context will be released in the EO stop
+         * callback */
+        AssertTrue(EM_OK == em_eo_stop(eo, 0, NULL));
+
+        UnlockWorkerTableEntry(workerId);
+
+        /* Worker deployed and immediately terminated */
+        LogPrint(ELogSeverityLevel_Info, "Worker 0x%x's termination requested while still deploying and now in progress. Dropped %d message(s)", \
+            workerId, messagesDropped);
     }
 }

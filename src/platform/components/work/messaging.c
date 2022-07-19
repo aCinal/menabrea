@@ -42,6 +42,23 @@ TMessage CreateMessage(TMessageId msgId, u32 payloadSize) {
     return event;
 }
 
+TMessage CopyMessage(TMessage message) {
+
+    TMessageId msgId = GetMessageId(message);
+    u32 payloadSize = GetMessagePayloadSize(message);
+
+    TMessage copy = CreateMessage(msgId, payloadSize);
+    if (likely(copy != MESSAGE_INVALID)) {
+
+        /* Copy the payload */
+        void * originalPayload = GetMessagePayload(message);
+        void * copyPayload = GetMessagePayload(copy);
+        (void) memcpy(copyPayload, originalPayload, payloadSize);
+    }
+
+    return copy;
+}
+
 void * GetMessagePayload(TMessage message) {
 
     SMessage * msgData = (SMessage *) em_event_pointer(message);
@@ -87,7 +104,9 @@ void SendMessage(TMessage message, TWorkerId receiver) {
     /* Access the message based on the descriptor (event) */
     SMessage * msgData = (SMessage *) em_event_pointer(message);
 
-    if (self != EM_EO_UNDEF) {
+    if (self != EM_EO_UNDEF && NULL != em_eo_get_context(self)) {
+
+        /* Sending a message from a worker context */
 
         SWorkerContext * context = (SWorkerContext *) em_eo_get_context(self);
         /* Set the sender based on the current context */
@@ -95,7 +114,8 @@ void SendMessage(TMessage message, TWorkerId receiver) {
 
     } else {
 
-        /* Allow sending a message from a non-EO context */
+        /* Allow sending a message from a non-EO context or from a raw EO
+         * not associated with a worker context (used by platform internally) */
         msgData->Header.Sender = WORKER_ID_INVALID;
     }
     msgData->Header.Receiver = receiver;

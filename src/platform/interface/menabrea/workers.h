@@ -83,10 +83,6 @@ typedef void (* TUserExitCallback)(void);
  */
 typedef void (* TUserHandlerCallback)(TMessage message);
 
-/* Note these values are HW-specific and assume four cores in the system */
-#define COREMASK_SHARED_CORE     0b0001  /**< Run the worker only on the shared core */
-#define COREMASK_ISOLATED_CORES  0b1110  /**< Run the worker on cores isolated from the Linux scheduler */
-
 /**
  * @brief Configuration used during worker deployment
  * @see DeployWorker
@@ -107,6 +103,7 @@ typedef struct SWorkerConfig {
  * @brief Create and start a worker
  * @param config Worker configuration
  * @return Worker ID on success, WORKER_ID_INVALID on failure
+ * @see WORKER_ID_INVALID
  */
 TWorkerId DeployWorker(const SWorkerConfig * config);
 
@@ -117,6 +114,7 @@ TWorkerId DeployWorker(const SWorkerConfig * config);
  * @param coreMask Mask of cores on which the worker is allowed to run
  * @param body Worker body executed when a message is sent to the worker
  * @return Worker ID on success, WORKER_ID_INVALID on failure
+ * @see WORKER_ID_INVALID
  */
 static inline TWorkerId DeploySimpleWorker(const char * name, TWorkerId id, int coreMask, TUserHandlerCallback body) {
 
@@ -137,6 +135,7 @@ static inline TWorkerId DeploySimpleWorker(const char * name, TWorkerId id, int 
  * @param coreMask Mask of cores on which the worker is allowed to run
  * @param body Worker body executed when a message is sent to the worker
  * @return Worker ID on success, WORKER_ID_INVALID on failure
+ * @see WORKER_ID_INVALID
  */
 static inline TWorkerId DeploySimpleParallelWorker(const char * name, TWorkerId id, int coreMask, TUserHandlerCallback body) {
 
@@ -182,6 +181,22 @@ TWorkerId GetOwnWorkerId(void);
  *        and the worker can be scheduler again in parallel
  */
 void LeaveCriticalSection(void);
+
+/**
+ * @brief Return a core mask corresponding to the shared core (suitable for non-critical applications)
+ * @return Mask of the shared core
+ * @note Platform operates on the assumption that one physical core is shared between EM-ODP
+ *       and other Linux processes, while the rest are isolated (e.g. via kernel command-line)
+ */
+int GetSharedCoreMask(void);
+
+/**
+ * @brief Return a core mask corresponding to isolated cores only (suitable for high-performance low-latency applications)
+ * @return Mask of isolated cores
+ * @note Platform operates on the assumption that one physical core is shared between EM-ODP
+ *       and other Linux processes, while the rest are isolated (e.g. via kernel command-line)
+ */
+int GetIsolatedCoresMask(void);
 
 #ifdef __cplusplus
 }

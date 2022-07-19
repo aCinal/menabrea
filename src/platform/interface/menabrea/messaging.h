@@ -19,6 +19,12 @@ typedef u16 TMessageId;  /**< Message identifier type */
 TMessage CreateMessage(TMessageId msgId, u32 payloadSize);
 
 /**
+ * @brief Create a copy of a message
+ * @return Message handle or MESSAGE_INVALID on failure
+ */
+TMessage CopyMessage(TMessage message);
+
+/**
  * @brief Access the payload of a message
  * @param message Message handle
  * @return Pointer to the message payload

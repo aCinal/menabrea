@@ -4,6 +4,7 @@
 include_directories(exception)
 include_directories(log)
 include_directories(startup)
+include_directories(timing)
 include_directories(work)
 
 # Propagate architecture definitions to all components
@@ -13,6 +14,7 @@ add_compile_definitions(PRIVATE ENV_64_BIT)
 add_subdirectory(exception)
 add_subdirectory(log)
 add_subdirectory(startup)
+add_subdirectory(timing)
 add_subdirectory(work)
 
 target_link_libraries(menabrea
@@ -20,6 +22,7 @@ target_link_libraries(menabrea
     exception
     log
     startup
+    timing
     work
     # Link against EM-ODP
     emodp
