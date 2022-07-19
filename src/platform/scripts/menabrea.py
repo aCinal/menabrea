@@ -64,8 +64,8 @@ def serialize_event_pool_config(pool_config: Dict[str, int]) -> str:
 
 def spawn_platform_subprocess(command_line: List[str]) -> None:
     """Spawn the platform process."""
-    command = ["setsid", EXECUTABLE_PATH] + command_line
-    subprocess.run(command)
+    command = [EXECUTABLE_PATH] + command_line
+    subprocess.Popen(command)
 
 if __name__ == "__main__":
     main()
