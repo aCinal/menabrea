@@ -8,11 +8,10 @@
 #include <event_machine/add-ons/event_machine_timer.h>
 
 typedef enum ETimerState {
-    ETimerState_Inactive = 0,
-    ETimerState_Arming,
+    ETimerState_Invalid = 0,
+    ETimerState_Idle,
     ETimerState_Armed,
-    ETimerState_Expired,
-    ETimerState_Cancelled
+    ETimerState_Destroyed
 } ETimerState;
 
 typedef struct STimerContext {
@@ -21,6 +20,7 @@ typedef struct STimerContext {
     TMessage Message;
     TWorkerId Receiver;
     u64 Period;
+    u32 SkipEvents;
     TTimerId TimerId;
     ETimerState State;
 } STimerContext;

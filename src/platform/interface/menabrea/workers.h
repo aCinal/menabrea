@@ -31,6 +31,8 @@ ODP_STATIC_ASSERT(WORKER_LOCAL_ID_BITS < sizeof(TWorkerId) * 8, \
     "WORKER_LOCAL_ID_BITS too large");
 ODP_STATIC_ASSERT(WORKER_LOCAL_ID_BITS + WORKER_GLOBAL_ID_BITS == sizeof(TWorkerId) * 8, \
     "WORKER_LOCAL_ID_BITS + WORKER_GLOBAL_ID_BITS inconsistent");
+ODP_STATIC_ASSERT(WORKER_ID_INVALID > MAX_WORKER_COUNT, \
+    "WORKER_ID_INVALID must be outside the MAX_WORKER_COUNT range");
 
 /**
  * @brief Retrieve the global part of a worker ID

@@ -16,21 +16,36 @@ typedef u16 TTimerId;                            /**< Timer identifier */
 
 /* Assert consistency between constants at compile time */
 ODP_STATIC_ASSERT(TIMER_ID_INVALID > MAX_TIMER_COUNT, \
-    "TIMER_ID_INVALID must be outside the than MAX_TIMER_COUNT range");
+    "TIMER_ID_INVALID must be outside the MAX_TIMER_COUNT range");
 
 /**
  * @brief Create a timer
- * @param message Message to be sent on timeout
- * @param receiver Receiver of the message
+ * @return Timer ID or TIMER_ID_INVALID on failure
+ * @see TIMER_ID_INVALID
+ */
+TTimerId CreateTimer(void);
+
+/**
+ * @brief Arm a timer
+ * @param timerId Timer ID
  * @param expires Timer expiration time in microseconds
  * @param period Timer period in microseconds (zero if one-shot timer)
+ * @param message Message to be sent on timeout
+ * @param receiver Receiver of the message
  * @return Timer ID or TIMER_ID_INVALID on failure
  * @note If a call to this function succeeds (return value is not TIMER_ID_INVALID), the ownership
  *       of the message is relinquished and the platform is responsible for the message delivery
  *       or destruction
  * @see TIMER_ID_INVALID
  */
-TTimerId CreateTimer(TMessage message, TWorkerId receiver, u64 expires, u64 period);
+TTimerId ArmTimer(TTimerId timerId, u64 expires, u64 period, TMessage message, TWorkerId receiver);
+
+/**
+ * @brief Cancel any pending timeouts and disarm a timer
+ * @param timerId Timer ID
+ * @return Timer ID or TIMER_ID_INVALID on failure
+ */
+TTimerId DisarmTimer(TTimerId timerId);
 
 /**
  * @brief Destroy a timer

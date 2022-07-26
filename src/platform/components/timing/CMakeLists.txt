@@ -1,6 +1,7 @@
 set(SOURCES
-    timing_daemon.c
+    timer_instance.c
     timer_table.c
+    timing_daemon.c
     timing.c
 )
 

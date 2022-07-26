@@ -262,20 +262,6 @@ void LeaveCriticalSection(void) {
     }
 }
 
-void TerminateAllWorkers(void) {
-
-    LogPrint(ELogSeverityLevel_Debug, "Terminating lingering workers...");
-
-    for (TWorkerId i = 0; i < MAX_WORKER_COUNT; i++) {
-
-        SWorkerContext * context = FetchWorkerContext(i);
-        if (context->State == EWorkerState_Active) {
-
-            TerminateWorker(MakeWorkerIdGlobal(i));
-        }
-    }
-}
-
 int GetSharedCoreMask(void) {
 
     /* Core 0 is always shared */
@@ -293,6 +279,20 @@ int GetIsolatedCoresMask(void) {
     invertedMask |= 0b1;
     /* Invert the mask to be left only with the isolated cores */
     return ~invertedMask;
+}
+
+void TerminateAllWorkers(void) {
+
+    LogPrint(ELogSeverityLevel_Debug, "Terminating lingering workers...");
+
+    for (TWorkerId i = 0; i < MAX_WORKER_COUNT; i++) {
+
+        SWorkerContext * context = FetchWorkerContext(i);
+        if (context->State == EWorkerState_Active) {
+
+            TerminateWorker(MakeWorkerIdGlobal(i));
+        }
+    }
 }
 
 static em_status_t WorkerEoStart(void * eoCtx, em_eo_t eo, const em_eo_conf_t * conf) {

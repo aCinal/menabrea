@@ -48,14 +48,14 @@ STimerContext * ReserveTimerContext(void) {
     for (TTimerId id = 0; id < MAX_TIMER_COUNT; id++) {
 
         /* Find free slot */
-        if (s_timerTable[id]->State == ETimerState_Inactive) {
+        if (s_timerTable[id]->State == ETimerState_Invalid) {
 
             /* Lock the entry and retest the state */
             LockTimerTableEntry(id);
-            if (s_timerTable[id]->State == ETimerState_Inactive) {
+            if (s_timerTable[id]->State == ETimerState_Invalid) {
 
                 /* Free slot found, reserve it */
-                s_timerTable[id]->State = ETimerState_Arming;
+                s_timerTable[id]->State = ETimerState_Idle;
                 UnlockTimerTableEntry(id);
                 return s_timerTable[id];
             }
@@ -80,7 +80,7 @@ void ReleaseTimerContext(TTimerId timerId) {
 STimerContext * FetchTimerContext(TTimerId timerId) {
 
     AssertTrue(timerId < MAX_TIMER_COUNT);
-    /* Do a sanity check each time a timer is fetched */
+    /* Do a sanity check each time a timer context is fetched */
     AssertTrue(s_timerTable[timerId]->TimerId == timerId);
     return s_timerTable[timerId];
 }
@@ -103,5 +103,6 @@ static void ResetContext(STimerContext * context) {
     context->Message = MESSAGE_INVALID;
     context->Receiver = WORKER_ID_INVALID;
     context->Period = 0;
-    context->State = ETimerState_Inactive;
+    context->SkipEvents = 0;
+    context->State = ETimerState_Invalid;
 }

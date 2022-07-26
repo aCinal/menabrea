@@ -1,5 +1,6 @@
 #include "timing_daemon.h"
 #include "timer_table.h"
+#include "timer_instance.h"
 #include "../work/worker_table.h"
 #include "../work/core_queue_groups.h"
 #include <menabrea/timing.h>
@@ -12,6 +13,7 @@ static em_status_t DaemonEoStart(void * eoCtx, em_eo_t eo, const em_eo_conf_t * 
 static em_status_t DaemonEoStop(void * eoCtx, em_eo_t eo);
 static void DaemonEoReceive(void * eoCtx, em_event_t event, em_event_type_t type, em_queue_t queue, void * qCtx);
 static inline void HandleTimeoutEvent(em_event_t event);
+static inline void HandleCleanTimeout(em_event_t event, STimerContext * context);
 
 static em_eo_t s_daemonEo = EM_EO_UNDEF;
 static em_queue_t s_daemonQueue = EM_QUEUE_UNDEF;
@@ -120,96 +122,140 @@ static inline void HandleTimeoutEvent(em_event_t event) {
     LockTimerTableEntry(timerId);
     STimerContext * context = FetchTimerContext(timerId);
 
-    em_event_t currentEvent = EM_EVENT_UNDEF;
     ETimerState state = context->State;
     switch (state) {
     case ETimerState_Armed:
-        /* Timer fired normally */
-        if (context->Period > 0) {
+        /* Timer armed, i.e. either fired normally and we can handle the timeout cleanly
+         * or it has been cancelled and rearmed before we got to handle any timeout events
+         * here. */
 
-            /* Periodic timer */
+        if (context->SkipEvents > 0) {
 
-            /* Send a copy of the original message */
-            TMessage messageCopy = CopyMessage(context->Message);
-            if (likely(messageCopy != MESSAGE_INVALID)) {
-
-                SendMessage(messageCopy, context->Receiver);
-                /* Acknowledge the timer - reuse the timeout event */
-                AssertTrue(EM_OK == em_tmo_ack(context->Tmo, event));
-                UnlockTimerTableEntry(timerId);
-
-            } else {
-
-                /* Save the message metadata on stack before releasing the context lock */
-                TMessageId msgId = GetMessageId(context->Message);
-                TWorkerId receiver = context->Receiver;
-                /* Acknowledge the timer - reuse the timeout event */
-                AssertTrue(EM_OK == em_tmo_ack(context->Tmo, event));
-                UnlockTimerTableEntry(timerId);
-                LogPrint(ELogSeverityLevel_Error, \
-                    "Failed to create a copy of the timeout message 0x%x (receiver: 0x%x, timer ID: 0x%x)", \
-                    msgId, receiver, timerId);
-            }
+            /* Timer has been cancelled and rearmed - a timeout event for the cancelled
+             * timer (that should be ignored) has already been sent to our queue */
+            context->SkipEvents--;
+            em_free(event);
+            UnlockTimerTableEntry(timerId);
 
         } else {
 
-            /* One-shot timer */
-
-            /* Send the message directly */
-            SendMessage(context->Message, context->Receiver);
-
-            /* Free the timeout event */
-            em_free(event);
-
-            /* Timer expired - application is responsible for destroying it */
-            context->State = ETimerState_Expired;
-
-            UnlockTimerTableEntry(timerId);
+            /* Normal conditions - timer is armed (note that HandleCleanTimeout unlocks the
+             * table entry internally) */
+            HandleCleanTimeout(event, context);
         }
         break;
 
-    case ETimerState_Cancelled:
-        /* Timer was cancelled after the timeout event has been sent */
+    case ETimerState_Idle:
+        /* Timer has been cancelled - if we are here, then the timeout event must
+         * have been sent before the cancellation */
 
-        /* Destroy the message and release the context */
-        DestroyMessage(context->Message);
+        AssertTrue(context->SkipEvents > 0);
+        context->SkipEvents--;
+        em_free(event);
 
-        /* Delete the timeout object */
-        AssertTrue(EM_OK == em_tmo_delete(context->Tmo, &currentEvent));
+        UnlockTimerTableEntry(timerId);
+        break;
 
-        if (context->Period > 0) {
+    case ETimerState_Destroyed:
+        /* Timer has been cancelled and destroyed before all timeout events have been
+         * handled. */
 
-            /* Periodic timer expired - free the timeout event */
-            AssertTrue(currentEvent != EM_EVENT_UNDEF);
-            em_free(currentEvent);
+        AssertTrue(context->SkipEvents > 0);
+        context->SkipEvents--;
+        em_free(event);
+
+        if (context->SkipEvents > 0) {
+
+            UnlockTimerTableEntry(timerId);
 
         } else {
 
-            /* One-shot timer expired - no event should be pending */
-            AssertTrue(currentEvent == EM_EVENT_UNDEF);
+            /* Only release the context when all late events have been delivered and handled */
+            ReleaseTimerContext(timerId);
+            UnlockTimerTableEntry(timerId);
+            LogPrint(ELogSeverityLevel_Debug, "%s(): Handled deferred destruction of timer 0x%x", \
+                __FUNCTION__, timerId);
         }
-
-        /* Release the timer context */
-        ReleaseTimerContext(timerId);
-        UnlockTimerTableEntry(timerId);
-
-        /* Free the timeout event */
-        em_free(event);
         break;
 
     default:
         /* Timer in invalid state */
 
-        /* This could occur if timer destruction commenced and before the timeout was cancelled, it fired.
-         * The 'DestroyTimer' function would still see the state as ETimerState_Armed and so would destroy
-         * the timer, but the event would still make its way here. */
-        LogPrint(ELogSeverityLevel_Warning, "Received timeout event for timer 0x%x in invalid state: %d", \
+        UnlockTimerTableEntry(timerId);
+        RaiseException(EExceptionFatality_Fatal, state, \
+            "Daemon handling a timeout event for timer 0x%x in invalid state: %d", \
             timerId, state);
+        break;
+    }
+}
+
+static inline void HandleCleanTimeout(em_event_t event, STimerContext * context) {
+
+    /* Caller must have called LockTimerTableEntry first */
+
+    TTimerId timerId = context->TimerId;
+
+    if (context->Period > 0) {
+
+        /* Periodic timer */
+
+        /* Send a copy of the original message */
+        TMessage messageCopy = CopyMessage(context->Message);
+        if (likely(messageCopy != MESSAGE_INVALID)) {
+
+            SendMessage(messageCopy, context->Receiver);
+
+            /* TODO: Add drift correction */
+
+            /* Rearm the timer - reuse the timeout event */
+            AssertTrue(EM_OK == em_tmo_set_rel(
+                context->Tmo,
+                MicrosecondsToTicks(context->Period),
+                event
+            ));
+
+            /* Remain in armed state */
+
+            UnlockTimerTableEntry(timerId);
+
+        } else {
+
+            /* Save the message metadata on stack before releasing the context lock */
+            TMessageId msgId = GetMessageId(context->Message);
+            TWorkerId receiver = context->Receiver;
+
+            /* TODO: Add drift correction */
+
+            /* Rearm the timer - reuse the timeout event */
+            AssertTrue(EM_OK == em_tmo_set_rel(
+                context->Tmo,
+                MicrosecondsToTicks(context->Period),
+                event
+            ));
+
+            /* Remain in armed state */
+
+            UnlockTimerTableEntry(timerId);
+            LogPrint(ELogSeverityLevel_Error, \
+                "Failed to create a copy of the timeout message 0x%x (receiver: 0x%x, timer ID: 0x%x)", \
+                msgId, receiver, timerId);
+        }
+
+    } else {
+
+        /* One-shot timer */
+
+        /* Send the message directly */
+        SendMessage(context->Message, context->Receiver);
 
         /* Free the timeout event */
         em_free(event);
-        break;
-    }
 
-    UnlockTimerTableEntry(timerId);
+        /* Transition to idle state */
+        context->Message = MESSAGE_INVALID;
+        context->Receiver = WORKER_ID_INVALID;
+        context->Period = 0;
+        context->State = ETimerState_Idle;
+        UnlockTimerTableEntry(timerId);
+    }
 }

@@ -16,7 +16,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#define SYNC_DISPATCH_ROUNDS          4 * 1024
+#define SYNC_DISPATCH_ROUNDS          16 * 1024
 #define EXIT_CHECK_DISPATCH_ROUNDS    4 * 1024
 #define DRAIN_DISPATCH_ROUNDS         64
 
@@ -194,15 +194,14 @@ static void RunMainDispatcher(void) {
     /* Wait for global exit to complete on all cores */
     ActiveSync(&s_platformShmem->CompleteGlobalAppExitCounter);
 
-
+    /* Cancel any timers left left running by the application */
+    CancelAllTimers();
     /* Tear down any workers left behind by the application */
     TerminateAllWorkers();
 
     ActiveSync(&s_platformShmem->WaitForWorkersTeardownCounter);
 
-    /* Close up shop - note that timers may continue to fire after
-     * workers have been terminated so a few send failures are
-     * expected here */
+    /* Close up shop */
     TimingTeardown();
     WorkTeardown();
 
