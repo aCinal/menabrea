@@ -198,7 +198,7 @@ static void SigbusHandler(siginfo_t * siginfo, ucontext_t * ucontext) {
         break;
 
     case BUS_MCEERR_AO:
-        /* Actiona optional */
+        /* Action optional */
         reason = "hardware memory error detected in process but not consumed";
         break;
 
@@ -234,6 +234,7 @@ static void SigfpeHandler(siginfo_t * siginfo, ucontext_t * ucontext) {
 
     case FPE_FLTOVF:
         reason = "floating-point overflow";
+        break;
 
     case FPE_FLTUND:
         reason = "floating-point underflow";
