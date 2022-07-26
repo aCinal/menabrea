@@ -20,7 +20,8 @@ TMessage CreateMessage(TMessageId msgId, u32 payloadSize);
 
 /**
  * @brief Create a copy of a message
- * @return Message handle or MESSAGE_INVALID on failure
+ * @param message Original message handle
+ * @return Message copy handle or MESSAGE_INVALID on failure
  */
 TMessage CopyMessage(TMessage message);
 
