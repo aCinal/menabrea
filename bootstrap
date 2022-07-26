@@ -3,7 +3,7 @@
 YOCTO_LTS_BRANCH=dunfell
 
 echo "Cloning the poky reference distribution..." &&
-# Fetch the reference Yocto distribution (fetch from long term support branch)
+# Fetch the reference Yocto distribution (from long term support branch)
 git clone git://git.yoctoproject.org/poky -b ${YOCTO_LTS_BRANCH} layers/poky &&
 echo "poky cloned successfully" &&
 
@@ -13,7 +13,7 @@ git clone git://git.openembedded.org/meta-openembedded -b ${YOCTO_LTS_BRANCH} la
 echo "meta-openembedded cloned successfully..." &&
 
 echo "Cloning the Raspberry Pi BSP metalayer..." &&
-# Fetch the Raspberry Pi board support metalayer (fetch from master)
+# Fetch the Raspberry Pi board support metalayer
 git clone git://git.yoctoproject.org/meta-raspberrypi -b ${YOCTO_LTS_BRANCH} layers/meta-raspberrypi &&
 echo "meta-raspberrypi cloned successfully" &&
 
