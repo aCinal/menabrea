@@ -12,6 +12,6 @@ DEPENDS = " \
     em-odp \
     "
 
-FILES_${PN} += "/opt"
+FILES:${PN} += "/opt"
 
 inherit cmake

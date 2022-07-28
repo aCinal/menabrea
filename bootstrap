@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-YOCTO_LTS_BRANCH=dunfell
+YOCTO_LTS_BRANCH=kirkstone
 
 echo "Cloning the poky reference distribution..." &&
 # Fetch the reference Yocto distribution (from long term support branch)

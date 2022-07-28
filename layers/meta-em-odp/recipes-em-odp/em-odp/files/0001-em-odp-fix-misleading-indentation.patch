@@ -1,0 +1,13 @@
+diff --git a/programs/common/cm_pktio.c b/programs/common/cm_pktio.c
+index abc3f05..7ffffc4 100644
+--- a/programs/common/cm_pktio.c
++++ b/programs/common/cm_pktio.c
+@@ -677,7 +677,7 @@ void pktio_close(void)
+ 		if (unlikely(ret != 0))
+ 			APPL_EXIT_FAILURE("pktio close failed for if:%d",
+ 					  if_idx);
+-			pktio_shm->ifs.pktio_hdl[if_idx] = ODP_PKTIO_INVALID;
++		pktio_shm->ifs.pktio_hdl[if_idx] = ODP_PKTIO_INVALID;
+ 	}
+ 
+ 	pktin_queue_queueing_destroy();

@@ -2,7 +2,7 @@ SUMMARY = "OpenDataPlane recipe"
 DESCRIPTION = "OpenDataPlane recipe"
 LICENSE = "MIT"
 
-SRC_URI = "git://github.com/OpenDataPlane/odp.git;protocol=https"
+SRC_URI = "git://github.com/OpenDataPlane/odp.git;branch=master;protocol=https"
 SRCREV = "c8690d3e9dccc29fc9ac4005258d397abe8d4859"
 
 # Git repositories are cloned to ${WORKDIR}/git by default
