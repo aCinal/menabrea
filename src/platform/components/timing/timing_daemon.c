@@ -176,7 +176,20 @@ static inline void HandleTimeoutEvent(em_event_t event) {
 
         } else {
 
-            /* Only release the context when all late events have been delivered and handled */
+            /* Only delete the timeout object and release the context
+             * when all late events have been delivered and handled */
+            em_event_t currentEvent;
+            /* Delete the timeout object */
+            AssertTrue(EM_OK == em_tmo_delete(context->Tmo, &currentEvent));
+            context->Tmo = EM_TMO_UNDEF;
+            /* No event could have been returned if the timer had been properly
+            * cancelled */
+            AssertTrue(currentEvent == EM_EVENT_UNDEF);
+
+            /* Sanity-check that no message leak occurs */
+            AssertTrue(context->Message == MESSAGE_INVALID);
+            AssertTrue(context->Receiver == WORKER_ID_INVALID);
+
             ReleaseTimerContext(timerId);
             UnlockTimerTableEntry(timerId);
             LogPrint(ELogSeverityLevel_Debug, "%s(): Handled deferred destruction of timer 0x%x", \
