@@ -136,6 +136,8 @@ static inline void HandleTimeoutEvent(em_event_t event) {
             context->SkipEvents--;
             em_free(event);
             UnlockTimerTableEntry(timerId);
+            LogPrint(ELogSeverityLevel_Debug, "%s(): Timer 0x%x cancelled and rearmed. Ignoring old event...", \
+                __FUNCTION__, timerId);
 
         } else {
 
@@ -154,6 +156,8 @@ static inline void HandleTimeoutEvent(em_event_t event) {
         em_free(event);
 
         UnlockTimerTableEntry(timerId);
+        LogPrint(ELogSeverityLevel_Debug, "%s(): Timer 0x%x cancelled and now idle. Ignoring late event...", \
+            __FUNCTION__, timerId);
         break;
 
     case ETimerState_Destroyed:
@@ -167,6 +171,8 @@ static inline void HandleTimeoutEvent(em_event_t event) {
         if (context->SkipEvents > 0) {
 
             UnlockTimerTableEntry(timerId);
+            LogPrint(ELogSeverityLevel_Debug, "%s(): Timer 0x%x cancelled and destroyed. Ignoring late event...", \
+                __FUNCTION__, timerId);
 
         } else {
 

@@ -20,5 +20,5 @@ DEPENDS = " \
 
 inherit autotools pkgconfig
 
-# Platform filters debug logs on its own - enable them at EM level
-EXTRA_OECONF:append = "--enable-debug-print"
+# Uncomment to enable debug logs at EM level
+# EXTRA_OECONF:append = "--enable-debug-print"
