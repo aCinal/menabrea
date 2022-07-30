@@ -112,7 +112,8 @@ TTimerId ArmTimer(TTimerId timerId, u64 expires, u64 period, TMessage message, T
     /* Fill in the context */
     context->Message = message;
     context->Receiver = receiver;
-    context->Period = period;
+    /* Store the period in ticks already */
+    context->Period = MicrosecondsToTicks(period);
     /* Do a state transition - note that we still hold the lock, so even if the EM-level timeout has fired
      * by now, the state will still be consistent once we release the lock */
     context->State = ETimerState_Armed;

@@ -50,3 +50,9 @@ em_timer_tick_t MicrosecondsToTicks(u64 us) {
     AssertTrue(s_timerInstance != EM_TIMER_UNDEF);
     return em_timer_ns_to_tick(s_timerInstance, us * 1000);
 }
+
+em_timer_tick_t CurrentTick(void) {
+
+    AssertTrue(s_timerInstance != EM_TIMER_UNDEF);
+    return em_timer_current_tick(s_timerInstance);
+}

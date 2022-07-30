@@ -10,5 +10,6 @@ void CreateTimerInstance(void);
 void DeleteTimerInstance(void);
 em_timer_t GetTimerInstance(void);
 em_timer_tick_t MicrosecondsToTicks(u64 us);
+em_timer_tick_t CurrentTick(void);
 
 #endif /* PLATFORM_COMPONENTS_TIMING_TIMER_INSTANCE_H */

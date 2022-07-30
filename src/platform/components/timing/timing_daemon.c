@@ -14,6 +14,7 @@ static em_status_t DaemonEoStop(void * eoCtx, em_eo_t eo);
 static void DaemonEoReceive(void * eoCtx, em_event_t event, em_event_type_t type, em_queue_t queue, void * qCtx);
 static inline void HandleTimeoutEvent(em_event_t event);
 static inline void HandleCleanTimeout(em_event_t event, STimerContext * context);
+static inline void RearmPeriodicTimer(em_event_t event, STimerContext * context);
 
 static em_eo_t s_daemonEo = EM_EO_UNDEF;
 static em_queue_t s_daemonQueue = EM_QUEUE_UNDEF;
@@ -183,7 +184,7 @@ static inline void HandleTimeoutEvent(em_event_t event) {
             AssertTrue(EM_OK == em_tmo_delete(context->Tmo, &currentEvent));
             context->Tmo = EM_TMO_UNDEF;
             /* No event could have been returned if the timer had been properly
-            * cancelled */
+             * cancelled */
             AssertTrue(currentEvent == EM_EVENT_UNDEF);
 
             /* Sanity-check that no message leak occurs */
@@ -224,14 +225,8 @@ static inline void HandleCleanTimeout(em_event_t event, STimerContext * context)
 
             SendMessage(messageCopy, context->Receiver);
 
-            /* TODO: Add drift correction */
-
             /* Rearm the timer - reuse the timeout event */
-            AssertTrue(EM_OK == em_tmo_set_rel(
-                context->Tmo,
-                MicrosecondsToTicks(context->Period),
-                event
-            ));
+            RearmPeriodicTimer(event, context);
 
             /* Remain in armed state */
 
@@ -243,14 +238,8 @@ static inline void HandleCleanTimeout(em_event_t event, STimerContext * context)
             TMessageId msgId = GetMessageId(context->Message);
             TWorkerId receiver = context->Receiver;
 
-            /* TODO: Add drift correction */
-
             /* Rearm the timer - reuse the timeout event */
-            AssertTrue(EM_OK == em_tmo_set_rel(
-                context->Tmo,
-                MicrosecondsToTicks(context->Period),
-                event
-            ));
+            RearmPeriodicTimer(event, context);
 
             /* Remain in armed state */
 
@@ -276,5 +265,39 @@ static inline void HandleCleanTimeout(em_event_t event, STimerContext * context)
         context->Period = 0;
         context->State = ETimerState_Idle;
         UnlockTimerTableEntry(timerId);
+    }
+}
+
+static inline void RearmPeriodicTimer(em_event_t event, STimerContext * context) {
+
+    context->PreviousExpiration = context->PreviousExpiration + context->Period;
+
+    /* Try blindly setting the timeout and handle EM-ODP error if overrun
+     * happened */
+    em_status_t status = em_tmo_set_abs(
+        context->Tmo,
+        context->PreviousExpiration,
+        event
+    );
+    switch (status) {
+    case EM_OK:
+        /* Timer rearmed cleanly */
+        break;
+
+    case EM_ERR_TOONEAR:
+        /* Timer overrun - set relative timeout and suffer a drift */
+        context->PreviousExpiration = CurrentTick();
+        AssertTrue(EM_OK == em_tmo_set_rel(
+            context->Tmo,
+            context->Period,
+            event
+        ));
+        break;
+
+    default:
+        RaiseException(EExceptionFatality_Fatal, status, \
+            "Failed to rearm periodic timer 0x%x - em_tmo_set_abs() returned %" PRI_STAT, \
+            context->TimerId, status);
+        break;
     }
 }

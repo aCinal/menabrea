@@ -19,7 +19,8 @@ typedef struct STimerContext {
     env_spinlock_t Lock;
     TMessage Message;
     TWorkerId Receiver;
-    u64 Period;
+    em_timer_tick_t Period;
+    em_timer_tick_t PreviousExpiration;
     u32 SkipEvents;
     TTimerId TimerId;
     ETimerState State;

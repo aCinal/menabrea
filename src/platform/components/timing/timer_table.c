@@ -103,6 +103,7 @@ static void ResetContext(STimerContext * context) {
     context->Message = MESSAGE_INVALID;
     context->Receiver = WORKER_ID_INVALID;
     context->Period = 0;
+    context->PreviousExpiration = 0;
     context->SkipEvents = 0;
     context->State = ETimerState_Invalid;
 }
