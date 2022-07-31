@@ -62,7 +62,7 @@ void LogPrintV(ELogSeverityLevel severity, const char * format, va_list args) {
     /* Assert the formatted date fit in the buffer */
     assert(dateLen > 0);
     size_t timestampLen = \
-        snprintf(timestamp, sizeof(timestamp), "%s.%ld", date, ts.tv_nsec);
+        snprintf(timestamp, sizeof(timestamp), "%s.%09ld", date, ts.tv_nsec);
     /* Assert enough space was reserved for the timestamp */
     assert(timestampLen <= MAX_TIMESTAMP_LEN);
 
