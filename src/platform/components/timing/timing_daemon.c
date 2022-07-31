@@ -270,7 +270,15 @@ static inline void HandleCleanTimeout(em_event_t event, STimerContext * context)
 
 static inline void RearmPeriodicTimer(em_event_t event, STimerContext * context) {
 
-    context->PreviousExpiration = context->PreviousExpiration + context->Period;
+    /* Make first expiration unlikely and suffer a pipeline flush then */
+    if (unlikely(context->PreviousExpiration == 0)) {
+
+        /* First expiration - use current tick */
+        context->PreviousExpiration = CurrentTick();
+    }
+
+    /* Calculate the absolute tick value of the next expiration */
+    context->PreviousExpiration += context->Period;
 
     /* Try blindly setting the timeout and handle EM-ODP error if overrun
      * happened */
@@ -285,13 +293,19 @@ static inline void RearmPeriodicTimer(em_event_t event, STimerContext * context)
         break;
 
     case EM_ERR_TOONEAR:
-        /* Timer overrun - set relative timeout and suffer a drift */
-        context->PreviousExpiration = CurrentTick();
+        /* Timer overrun */
+
+        /* Set relative timeout and suffer a drift */
         AssertTrue(EM_OK == em_tmo_set_rel(
             context->Tmo,
             context->Period,
             event
         ));
+
+        /* Set the previous expiration tick to now so as to not
+         * suffer a pipeline flush when handling the next timeout
+         * (cf. unlikely branch at the top of the function) */
+        context->PreviousExpiration = CurrentTick();
         break;
 
     default:

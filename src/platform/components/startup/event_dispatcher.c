@@ -194,7 +194,7 @@ static void RunMainDispatcher(void) {
     /* Wait for global exit to complete on all cores */
     ActiveSync(&s_platformShmem->CompleteGlobalAppExitCounter);
 
-    /* Cancel any timers left left running by the application */
+    /* Cancel any timers left running by the application */
     CancelAllTimers();
     /* Tear down any workers left behind by the application */
     TerminateAllWorkers();

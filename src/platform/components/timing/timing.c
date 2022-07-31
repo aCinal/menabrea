@@ -12,6 +12,7 @@
 #include <event_machine.h>
 
 static inline void DestroyAllTimers(void);
+static inline void ChangeStateFromArmedToIdle(STimerContext * context);
 
 void TimingInit(void) {
 
@@ -147,15 +148,8 @@ TTimerId DisarmTimer(TTimerId timerId) {
             AssertTrue(currentEvent != EM_EVENT_UNDEF);
             em_free(currentEvent);
 
-            /* Destroy the message */
-            DestroyMessage(context->Message);
-            context->Message = MESSAGE_INVALID;
-            context->Receiver = WORKER_ID_INVALID;
-
-            context->Period = 0;
-
-            /* Do a state transition */
-            context->State = ETimerState_Idle;
+            /* Transition to idle state */
+            ChangeStateFromArmedToIdle(context);
             UnlockTimerTableEntry(timerId);
 
             LogPrint(ELogSeverityLevel_Debug, "%s(): Cleanly disarmed timer 0x%x", \
@@ -173,15 +167,8 @@ TTimerId DisarmTimer(TTimerId timerId) {
             /* One-shot EM timers are in use - no event should have been returned */
             AssertTrue(currentEvent == EM_EVENT_UNDEF);
 
-            /* Destroy the message */
-            DestroyMessage(context->Message);
-            context->Message = MESSAGE_INVALID;
-            context->Receiver = WORKER_ID_INVALID;
-
-            context->Period = 0;
-
-            /* Do a state transition */
-            context->State = ETimerState_Idle;
+            /* Transition to idle state */
+            ChangeStateFromArmedToIdle(context);
             UnlockTimerTableEntry(timerId);
 
             LogPrint(ELogSeverityLevel_Debug, "%s(): Disarmed timer 0x%x, but an event has been sent already", \
@@ -206,6 +193,7 @@ TTimerId DisarmTimer(TTimerId timerId) {
         AssertTrue(context->Message == MESSAGE_INVALID);
         AssertTrue(context->Receiver = WORKER_ID_INVALID);
         AssertTrue(context->Period == 0);
+        AssertTrue(context->PreviousExpiration == 0);
 
         UnlockTimerTableEntry(timerId);
         return timerId;
@@ -298,4 +286,19 @@ static inline void DestroyAllTimers(void) {
             DestroyTimer(i);
         }
     }
+}
+
+static inline void ChangeStateFromArmedToIdle(STimerContext * context) {
+
+    /* Destroy the message */
+    DestroyMessage(context->Message);
+    context->Message = MESSAGE_INVALID;
+    context->Receiver = WORKER_ID_INVALID;
+
+    /* Reset periodic timer state */
+    context->Period = 0;
+    context->PreviousExpiration = 0;
+
+    /* Do the actual state transition */
+    context->State = ETimerState_Idle;
 }
