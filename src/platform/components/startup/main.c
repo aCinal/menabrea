@@ -19,17 +19,9 @@ static void InitializeLogger(void);
 static int ClaimCpus(void);
 static em_pool_cfg_t TranslateToEmPoolConfig(SPoolConfig * config);
 
-/**
- * @brief Platform entry point
- * @param argc Arguments count
- * @param argv Arguments vector
- * @return Status
- */
 int main(int argc, char **argv) {
 
     InitializeLogger();
-
-    /* Install signal handlers */
     InstallSignalHandlers();
 
     /* Parse command line arguments */
@@ -41,7 +33,7 @@ int main(int argc, char **argv) {
     LogPrint(ELogSeverityLevel_Info, "Initializing ODP layer...");
     /* Configure and initialize the ODP layer */
     SOdpStartupConfig odpStartupConfig = {
-        .Cores = numOfCpus,
+        .Cores = numOfCpus
     };
     odp_instance_t odpInstance = InitializeOpenDataPlane(&odpStartupConfig);
     LogPrint(ELogSeverityLevel_Info, "ODP layer ready");
@@ -71,6 +63,8 @@ int main(int argc, char **argv) {
             .GlobalWorkerId = startupParams->GlobalWorkerId,
         }
     };
+    /* Free startup params as not needed anymore */
+    free(startupParams);
     RunEventDispatchers(&dispatcherConfig);
 
     AssertTrue(EM_OK == em_term(emConf));
@@ -82,8 +76,10 @@ int main(int argc, char **argv) {
 
     LogPrint(ELogSeverityLevel_Info, "Platform shutdown complete");
 
-    /* Let the OS free emConf heap memory, unlink application libraries
-     * and clean everything up. */
+    free(emConf);
+    free(appLibs);
+
+    /* Let the OS unlink application libraries and clean everything up. */
     return 0;
 }
 
