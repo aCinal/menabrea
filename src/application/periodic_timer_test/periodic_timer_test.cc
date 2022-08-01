@@ -38,7 +38,7 @@ static void CreatePeriodic(TWorkerId receiver) {
     TMessage message = CreateMessage(APP_TIMEOUT_MSG_ID, sizeof(AppTimeoutMsg));
     AssertTrue(message != MESSAGE_INVALID);
     /* Create a timer */
-    TTimerId timerId = CreateTimer();
+    TTimerId timerId = CreateTimer("periodic");
     AssertTrue(timerId != TIMER_ID_INVALID);
     /* Save the timer ID in the message payload */
     AppTimeoutMsg * payload = static_cast<AppTimeoutMsg *>(GetMessagePayload(message));

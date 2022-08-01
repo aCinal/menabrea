@@ -72,12 +72,17 @@ static void CreatePeriodicTimers(TWorkerId receiver, u32 count, u64 period) {
         /* Create a timeout message */
         TMessage message = CreateMessage(APP_TIMEOUT_MSG_ID, sizeof(AppTimeoutMsg));
         AssertTrue(message != MESSAGE_INVALID);
+
         /* Create a timer */
-        TTimerId timerId = CreateTimer();
+        char name[16];
+        (void) snprintf(name, sizeof(name), "periodic_%u", i);
+        TTimerId timerId = CreateTimer(name);
         AssertTrue(timerId != TIMER_ID_INVALID);
+
         /* Save the timer ID in the message payload */
         AppTimeoutMsg * payload = static_cast<AppTimeoutMsg *>(GetMessagePayload(message));
         payload->TimerId = timerId;
+
         /* Arm the timer and assert success */
         TTimerId ret = ArmTimer(timerId, (rand() % 100) * 1000 + CONSTANT_DELAY, period, message, receiver);
         AssertTrue(ret == timerId);
@@ -95,7 +100,7 @@ static void DoArmDisarmSequence(TWorkerId receiver, u32 count) {
     }
 
     /* Create a timer */
-    TTimerId timerId = CreateTimer();
+    TTimerId timerId = CreateTimer("unstable_timer");
     AssertTrue(timerId != TIMER_ID_INVALID);
 
     std::for_each(

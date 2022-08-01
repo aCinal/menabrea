@@ -20,10 +20,11 @@ ODP_STATIC_ASSERT(TIMER_ID_INVALID > MAX_TIMER_COUNT, \
 
 /**
  * @brief Create a timer
+ * @param name Human-readable timer name
  * @return Timer ID or TIMER_ID_INVALID on failure
  * @see TIMER_ID_INVALID
  */
-TTimerId CreateTimer(void);
+TTimerId CreateTimer(const char * name);
 
 /**
  * @brief Arm a timer

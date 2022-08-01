@@ -35,15 +35,20 @@ void TimingTeardown(void) {
     TimingDaemonTeardown();
 }
 
-TTimerId CreateTimer(void) {
+TTimerId CreateTimer(const char * name) {
 
     /* Reserve the context */
     STimerContext * context = ReserveTimerContext();
     if (unlikely(context == NULL)) {
 
-        LogPrint(ELogSeverityLevel_Error, "%s(): Failed to reserve timer context", __FUNCTION__);
+        LogPrint(ELogSeverityLevel_Error, "%s(): Failed to reserve context for timer '%s'", \
+            __FUNCTION__, name);
         return TIMER_ID_INVALID;
     }
+
+    /* Copy the name and ensure proper NULL-termination (see strncpy manpage) */
+    (void) strncpy(context->Name, name, sizeof(context->Name) - 1);
+    context->Name[sizeof(context->Name) - 1] = '\0';
 
     /* Create EM timeout object */
     context->Tmo = em_tmo_create(
@@ -57,7 +62,8 @@ TTimerId CreateTimer(void) {
     if (unlikely(context->Tmo == EM_TMO_UNDEF)) {
 
         ReleaseTimerContext(context->TimerId);
-        LogPrint(ELogSeverityLevel_Error, "%s(): Failed to create a timeout object", __FUNCTION__);
+        LogPrint(ELogSeverityLevel_Error, "%s(): Failed to create a timeout object for timer '%s'", \
+            __FUNCTION__, name);
         return TIMER_ID_INVALID;
     }
 
@@ -66,16 +72,18 @@ TTimerId CreateTimer(void) {
 
 TTimerId ArmTimer(TTimerId timerId, u64 expires, u64 period, TMessage message, TWorkerId receiver) {
 
+    char timerName[MAX_TIMER_NAME_LEN];
     LockTimerTableEntry(timerId);
     STimerContext * context = FetchTimerContext(timerId);
+    (void) strcpy(timerName, context->Name);
 
     /* Check timer state */
     ETimerState state = context->State;
     if (state != ETimerState_Idle) {
 
         UnlockTimerTableEntry(timerId);
-        LogPrint(ELogSeverityLevel_Warning, "%s(): Timer 0x%x in invalid state: %d (message ID: 0x%x, receiver: 0x%x)", \
-            __FUNCTION__, timerId, state, GetMessageId(message), receiver);
+        LogPrint(ELogSeverityLevel_Warning, "%s(): Timer '%s' (0x%x) in invalid state: %d (message ID: 0x%x, receiver: 0x%x)", \
+            __FUNCTION__, timerName, timerId, state, GetMessageId(message), receiver);
         return TIMER_ID_INVALID;
     }
 
@@ -84,8 +92,8 @@ TTimerId ArmTimer(TTimerId timerId, u64 expires, u64 period, TMessage message, T
     if (unlikely(timeoutEvent == EM_EVENT_UNDEF)) {
 
         UnlockTimerTableEntry(timerId);
-        LogPrint(ELogSeverityLevel_Error, "%s(): Failed to allocate timeout event for timer 0x%x (message ID: 0x%x, receiver: 0x%x)", \
-            __FUNCTION__, timerId, GetMessageId(message), receiver);
+        LogPrint(ELogSeverityLevel_Error, "%s(): Failed to allocate timeout event for timer '%s' (timer ID: 0x%x, message ID: 0x%x, receiver: 0x%x)", \
+            __FUNCTION__, timerName, timerId, GetMessageId(message), receiver);
         return TIMER_ID_INVALID;
     }
 
@@ -105,8 +113,8 @@ TTimerId ArmTimer(TTimerId timerId, u64 expires, u64 period, TMessage message, T
 
         UnlockTimerTableEntry(timerId);
         em_free(timeoutEvent);
-        LogPrint(ELogSeverityLevel_Error, "%s(): Failed to arm %s timer 0x%x (message ID: 0x%x, receiver: 0x%x)", \
-            __FUNCTION__, period > 0 ? "periodic" : "one-shot", timerId, GetMessageId(message), receiver);
+        LogPrint(ELogSeverityLevel_Error, "%s(): Failed to arm timer '%s' (timer ID: 0x%x, message ID: 0x%x, receiver: 0x%x)", \
+            __FUNCTION__, timerName, timerId, GetMessageId(message), receiver);
         return TIMER_ID_INVALID;
     }
 
@@ -126,9 +134,12 @@ TTimerId ArmTimer(TTimerId timerId, u64 expires, u64 period, TMessage message, T
 
 TTimerId DisarmTimer(TTimerId timerId) {
 
+    char timerName[MAX_TIMER_NAME_LEN];
     LockTimerTableEntry(timerId);
 
     STimerContext * context = FetchTimerContext(timerId);
+
+    (void) strcpy(timerName, context->Name);
     em_tmo_t tmo = context->Tmo;
     ETimerState state = context->State;
     em_event_t currentEvent = EM_EVENT_UNDEF;
@@ -152,8 +163,8 @@ TTimerId DisarmTimer(TTimerId timerId) {
             ChangeStateFromArmedToIdle(context);
             UnlockTimerTableEntry(timerId);
 
-            LogPrint(ELogSeverityLevel_Debug, "%s(): Cleanly disarmed timer 0x%x", \
-                __FUNCTION__, timerId);
+            LogPrint(ELogSeverityLevel_Debug, "%s(): Cleanly disarmed timer '%s' (0x%x)", \
+                __FUNCTION__, timerName, timerId);
             break;
 
         case EM_ERR_BAD_STATE:
@@ -171,16 +182,16 @@ TTimerId DisarmTimer(TTimerId timerId) {
             ChangeStateFromArmedToIdle(context);
             UnlockTimerTableEntry(timerId);
 
-            LogPrint(ELogSeverityLevel_Debug, "%s(): Disarmed timer 0x%x, but an event has been sent already", \
-                __FUNCTION__, timerId);
+            LogPrint(ELogSeverityLevel_Debug, "%s(): Disarmed timer '%s' (0x%x), but an event has been sent already", \
+                __FUNCTION__, timerName, timerId);
             break;
 
         default:
             /* Timer framework error */
 
             UnlockTimerTableEntry(timerId);
-            RaiseException(EExceptionFatality_Fatal, status, "%s(): em_tmo_cancel() failed for timer 0x%x", \
-                __FUNCTION__, timerId);
+            RaiseException(EExceptionFatality_Fatal, status, "%s(): em_tmo_cancel() failed for timer '%s' (0x%x)", \
+                __FUNCTION__, timerName, timerId);
             break;
         }
         return timerId;
@@ -202,23 +213,26 @@ TTimerId DisarmTimer(TTimerId timerId) {
         /* Timer in invalid state */
 
         UnlockTimerTableEntry(timerId);
-        LogPrint(ELogSeverityLevel_Warning, "%s(): Timer 0x%x in invalid state: %d", \
-            __FUNCTION__, timerId, state);
+        LogPrint(ELogSeverityLevel_Warning, "%s(): Timer '%s' (0x%x) in invalid state: %d", \
+            __FUNCTION__, timerName, timerId, state);
         return TIMER_ID_INVALID;
     }
 }
 
 void DestroyTimer(TTimerId timerId) {
 
+    char timerName[MAX_TIMER_NAME_LEN];
+
     LockTimerTableEntry(timerId);
     STimerContext * context = FetchTimerContext(timerId);
+    (void) strcpy(timerName, context->Name);
 
     ETimerState state = context->State;
     if (state != ETimerState_Idle) {
 
-        LogPrint(ELogSeverityLevel_Warning, "%s(): Timer 0x%x in invalid state: %d", \
-            __FUNCTION__, timerId, state);
         UnlockTimerTableEntry(timerId);
+        LogPrint(ELogSeverityLevel_Warning, "%s(): Timer '%s' (0x%x) in invalid state: %d", \
+            __FUNCTION__, timerName, timerId, state);
         return;
     }
 
@@ -229,8 +243,8 @@ void DestroyTimer(TTimerId timerId) {
         context->State = ETimerState_Destroyed;
         UnlockTimerTableEntry(timerId);
         LogPrint(ELogSeverityLevel_Debug, \
-            "%s(): Destruction of timer 0x%x delayed until the timing daemon receives all timeout events", \
-            __FUNCTION__, timerId);
+            "%s(): Destruction of timer '%s' (0x%x) delayed until the timing daemon receives all timeout events", \
+            __FUNCTION__, timerName, timerId);
 
     } else {
 
@@ -250,8 +264,8 @@ void DestroyTimer(TTimerId timerId) {
 
         ReleaseTimerContext(timerId);
         UnlockTimerTableEntry(timerId);
-        LogPrint(ELogSeverityLevel_Debug, "%s(): Cleanly destroyed timer 0x%x", \
-            __FUNCTION__, timerId);
+        LogPrint(ELogSeverityLevel_Debug, "%s(): Cleanly destroyed timer '%s' (0x%x)", \
+            __FUNCTION__, timerName, timerId);
     }
 }
 

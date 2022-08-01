@@ -7,6 +7,8 @@
 #include <menabrea/workers.h>
 #include <event_machine/add-ons/event_machine_timer.h>
 
+#define MAX_TIMER_NAME_LEN  16
+
 typedef enum ETimerState {
     ETimerState_Invalid = 0,
     ETimerState_Idle,
@@ -15,6 +17,7 @@ typedef enum ETimerState {
 } ETimerState;
 
 typedef struct STimerContext {
+    char Name[MAX_TIMER_NAME_LEN];
     em_tmo_t Tmo;
     env_spinlock_t Lock;
     TMessage Message;

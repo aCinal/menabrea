@@ -99,6 +99,7 @@ void UnlockTimerTableEntry(TTimerId timerId) {
 
 static void ResetContext(STimerContext * context) {
 
+    (void) memset(context->Name, 0, sizeof(context->Name));
     context->Tmo = EM_TMO_UNDEF;
     context->Message = MESSAGE_INVALID;
     context->Receiver = WORKER_ID_INVALID;
