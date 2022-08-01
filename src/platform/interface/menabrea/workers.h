@@ -11,7 +11,7 @@ extern "C" {
 
 typedef u16 TWorkerId;                                       /**< Worker identifier type */
 typedef em_event_t TMessage;                                 /**< Opaque message handle */
-#define MESSAGE_INVALID EM_EVENT_UNDEF                       /**< Magic value to signal message allocation failure */
+#define MESSAGE_INVALID         EM_EVENT_UNDEF               /**< Magic value to signal message allocation failure */
 
 #define WORKER_ID_INVALID       ( (TWorkerId) 0xFFFF )       /**< Magic value used to indicate worker deployment failure and request to allocate ID dynamically */
 #define WORKER_ID_DYNAMIC_BASE  ( (TWorkerId) 0x07FF )       /**< Boundary value between static worker ID pool and dynamic allocation pool */
@@ -51,6 +51,23 @@ static inline TWorkerId WorkerIdGetGlobal(TWorkerId id) {
 static inline TWorkerId WorkerIdGetLocal(TWorkerId id) {
     return (id & WORKER_LOCAL_ID_MASK);
 }
+
+/**
+ * @brief Combine global and local parts of worker ID
+ * @param globalId Global part of a worker ID
+ * @param localId Local part of a worker ID
+ * @return Resulting fully-qualified worker ID
+ */
+static inline TWorkerId MakeWorkerId(TWorkerId globalId, TWorkerId localId) {
+    return ( (globalId << WORKER_LOCAL_ID_BITS) & WORKER_GLOBAL_ID_MASK ) \
+        | (localId & WORKER_LOCAL_ID_MASK);
+}
+
+/**
+ * @brief Get global part of local workers's worker IDs
+ * @return Current node's global worker ID
+ */
+TWorkerId GetOwnGlobalId(void);
 
 /**
  * @brief User-provided global initialization function

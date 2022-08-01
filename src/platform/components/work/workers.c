@@ -158,7 +158,7 @@ void TerminateWorker(TWorkerId workerId) {
     /* If called with WORKER_ID_INVALID, terminate current worker */
     TWorkerId realId = (workerId == WORKER_ID_INVALID) ? GetOwnWorkerId() : workerId;
 
-    if (WorkerIdGetGlobal(realId) != GetGlobalWorkerId()) {
+    if (WorkerIdGetGlobal(realId) != GetOwnGlobalId()) {
 
         LogPrint(ELogSeverityLevel_Warning, "%s(): Attempted to terminate remote worker 0x%x", \
             __FUNCTION__, workerId);
@@ -293,7 +293,7 @@ void TerminateAllWorkers(void) {
         SWorkerContext * context = FetchWorkerContext(i);
         if (context->State == EWorkerState_Active) {
 
-            TerminateWorker(MakeWorkerIdGlobal(i));
+            TerminateWorker(MakeWorkerId(GetOwnGlobalId(), i));
         }
     }
 }

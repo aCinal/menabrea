@@ -75,7 +75,7 @@ SWorkerContext * ReserveWorkerContext(TWorkerId workerId) {
 
                     /* Free slot found, reserve it */
                     s_workerTable[id]->State = EWorkerState_Deploying;
-                    s_workerTable[id]->WorkerId = MakeWorkerIdGlobal(id);
+                    s_workerTable[id]->WorkerId = MakeWorkerId(GetOwnGlobalId(), id);
                     UnlockWorkerTableEntry(id);
                     return s_workerTable[id];
                 }
@@ -110,7 +110,7 @@ SWorkerContext * ReserveWorkerContext(TWorkerId workerId) {
         }
         /* Reserve the entry */
         s_workerTable[localId]->State = EWorkerState_Deploying;
-        s_workerTable[localId]->WorkerId = MakeWorkerIdGlobal(localId);
+        s_workerTable[localId]->WorkerId = MakeWorkerId(GetOwnGlobalId(), localId);
         UnlockWorkerTableEntry(workerId);
         return s_workerTable[localId];
     }
@@ -177,23 +177,11 @@ void UnlockWorkerTableEntry(TWorkerId workerId) {
     env_spinlock_unlock(&s_workerTable[localId]->Lock);
 }
 
-TWorkerId GetGlobalWorkerId(void) {
+TWorkerId GetOwnGlobalId(void) {
 
     /* Assert global ID configured for this node */
     AssertTrue(s_globalWorkerId != WORKER_ID_INVALID);
     return s_globalWorkerId;
-}
-
-TWorkerId MakeWorkerIdGlobal(TWorkerId localId) {
-
-    /* Assert global ID configured for this node */
-    AssertTrue(s_globalWorkerId != WORKER_ID_INVALID);
-    /* Shift the global ID by the local part bits and mask it */
-    TWorkerId globalPart = (s_globalWorkerId << WORKER_LOCAL_ID_BITS) & WORKER_GLOBAL_ID_MASK;
-    /* Remove any global ID bits set by the caller */
-    TWorkerId localPart = localId & WORKER_LOCAL_ID_MASK;
-    /* OR the two parts together */
-    return globalPart | localPart;
 }
 
 static void ResetContext(SWorkerContext * context) {
