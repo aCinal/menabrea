@@ -18,8 +18,7 @@ void SetUpQueueGroups(void) {
     /* Get the number of subsets of cores. Exclude the empty set as there
      * is no point in creating a queue group for no cores. */
     int groupCount = (1 << cores) - 1;
-    LogPrint(ELogSeverityLevel_Info, "%s(): Setting up %d queue groups...", \
-        __FUNCTION__, groupCount);
+    LogPrint(ELogSeverityLevel_Info, "Setting up %d queue groups...", groupCount);
     s_coreGroups = malloc(sizeof(SCoreGroups) + groupCount * sizeof(em_queue_group_t));
     AssertTrue(s_coreGroups != NULL);
 

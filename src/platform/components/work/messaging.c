@@ -20,7 +20,7 @@ void MessagingInit(em_pool_cfg_t * messagingPoolConfig) {
 
 void MessagingTeardown(void) {
 
-    LogPrint(ELogSeverityLevel_Info, "%s(): Deleting the event pool...", __FUNCTION__);
+    LogPrint(ELogSeverityLevel_Info, "Deleting the event pool...");
     /* Delete the event pool */
     AssertTrue(EM_OK ==  em_pool_delete(MESSAGING_EVENT_POOL));
 }

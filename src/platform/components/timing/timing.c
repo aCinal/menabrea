@@ -257,8 +257,7 @@ void DestroyTimer(TTimerId timerId) {
 
 void CancelAllTimers(void) {
 
-    LogPrint(ELogSeverityLevel_Debug, "%s(): Cancelling any remaining timers...", \
-        __FUNCTION__);
+    LogPrint(ELogSeverityLevel_Debug, "Cancelling any remaining timers...");
 
     for (TTimerId i = 0; i < MAX_TIMER_COUNT; i++) {
 

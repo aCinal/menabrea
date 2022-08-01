@@ -13,8 +13,8 @@ void TimerTableInit(void) {
     size_t entrySize = ENV_CACHE_LINE_SIZE_ROUNDUP(sizeof(STimerContext));
     size_t tableSize = entrySize * MAX_TIMER_COUNT;
     LogPrint(ELogSeverityLevel_Info, \
-        "%s(): Creating timer table in shared memory - max timers: %d, entry size: %ld, table size: %ld", \
-        __FUNCTION__, MAX_TIMER_COUNT, entrySize, tableSize);
+        "Creating timer table in shared memory - max timers: %d, entry size: %ld, table size: %ld", \
+        MAX_TIMER_COUNT, entrySize, tableSize);
 
     /* Do one big allocation and then set up the pointers to reference parts of it */
     void * tableBase = env_shared_malloc(tableSize);
@@ -65,7 +65,7 @@ STimerContext * ReserveTimerContext(void) {
         }
     }
 
-    LogPrint(ELogSeverityLevel_Critical, "%s(): No free timer IDs found!", __FUNCTION__);
+    LogPrint(ELogSeverityLevel_Critical, "No free timer IDs found!");
     return NULL;
 }
 

@@ -1,25 +1,27 @@
 
 #include "log.h"
 #include <menabrea/log.h>
+#include <menabrea/common.h>
 #include <stdarg.h>
-#include <unistd.h>
 #include <stdio.h>
-#include <sys/prctl.h>
 #include <time.h>
 #include <string.h>
 #include <assert.h>
 
 #define MAX_TIMESTAMP_LEN     64
-#define MAX_PROC_NAME_LEN     16
 #define MAX_USER_PAYLOAD_LEN  512
 
-#define MIN(x, y)             ( (x) ^ ( ( (x) ^ (y) ) & -( (x) > (y) ) ) )
-
 static bool s_verbose = false;
+static TLoggerCallback s_loggerCallback = NULL;
 
 void LogInit(bool verbose) {
 
     s_verbose = verbose;
+}
+
+void SetLoggerCallback(TLoggerCallback callback) {
+
+    s_loggerCallback = callback;
 }
 
 void LogPrint(ELogSeverityLevel severity, const char * format, ...) {
@@ -66,10 +68,6 @@ void LogPrintV(ELogSeverityLevel severity, const char * format, va_list args) {
     /* Assert enough space was reserved for the timestamp */
     assert(timestampLen <= MAX_TIMESTAMP_LEN);
 
-    char procName[MAX_PROC_NAME_LEN] = "<unknown>";
-    /* Get process name */
-    (void) prctl(PR_GET_NAME, procName, 0, 0, 0);
-
     char userPayload[MAX_USER_PAYLOAD_LEN + 1];
     /* Format the user payload */
     size_t userPayloadLen = vsnprintf(userPayload, sizeof(userPayload), format, args);
@@ -91,6 +89,14 @@ void LogPrintV(ELogSeverityLevel severity, const char * format, va_list args) {
     /* Ensure userPayload is properly null-terminated for fprintf's use */
     userPayload[userPayloadLen] = '\0';
 
-    fprintf(stderr, "%s %s %s (%d): %s\n", \
-        severityTags[severity], timestamp, procName, getpid(), userPayload);
+    if (likely(s_loggerCallback)) {
+
+        s_loggerCallback(severityTags[severity], timestamp, userPayload);
+
+    } else {
+
+        /* Default logging */
+        fprintf(stderr, "%s %s: %s\n", \
+            severityTags[severity], timestamp, userPayload);
+    }
 }

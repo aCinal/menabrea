@@ -31,26 +31,24 @@ SAppLibsSet * LoadApplicationLibraries(void) {
         char * token = strtok_r(libList, ":", &saveptr);
         while (token != NULL) {
 
-            LogPrint(ELogSeverityLevel_Debug, "%s(): Trying to load library: %s", \
-                __FUNCTION__, token);
-
+            LogPrint(ELogSeverityLevel_Debug, "Trying to load library: %s", token);
             if (0 == LoadLibrary(token, &handles->Libs[handles->Count])) {
 
                 handles->Count++;
             }
-
             token = strtok_r(NULL, ":", &saveptr);
         }
 
-        LogPrint(ELogSeverityLevel_Info, "%s(): Loaded %d application libraries", \
-            __FUNCTION__, handles->Count);
+        LogPrint(ELogSeverityLevel_Info, "Loaded %d application libraries", \
+            handles->Count);
 
         free(libList);
 
     } else {
 
-        LogPrint(ELogSeverityLevel_Info, "%s(): Environment variable %s not set. Not loading any applications", \
-            __FUNCTION__, APP_LIB_LIST_ENV);
+        LogPrint(ELogSeverityLevel_Info, \
+            "Environment variable %s not set. Not loading any applications", \
+            APP_LIB_LIST_ENV);
     }
 
     return handles;

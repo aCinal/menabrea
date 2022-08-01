@@ -1,6 +1,7 @@
 #define _GNU_SOURCE
 #include "command_line.h"
 #include "../log/log.h"
+#include "../log/startup_logger.h"
 #include "../exception/signal_handlers.h"
 #include "open_data_plane_startup.h"
 #include "event_machine_startup.h"
@@ -90,6 +91,7 @@ static void InitializeLogger(void) {
     char * verbosity = getenv(LOG_VERBOSITY_ENV);
     bool verbose = verbosity && 0 == strcmp(verbosity, "1");
     LogInit(verbose);
+    SetLoggerCallback(StartupLoggerCallback);
 }
 
 static int ClaimCpus(void) {

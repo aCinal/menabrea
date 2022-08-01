@@ -30,8 +30,8 @@ void WorkerTableInit(TWorkerId globalWorkerId) {
     size_t entrySize = ENV_CACHE_LINE_SIZE_ROUNDUP(sizeof(SWorkerContext) + cores * sizeof(void *));
     size_t tableSize = entrySize * MAX_WORKER_COUNT;
     LogPrint(ELogSeverityLevel_Info, \
-        "%s(): Creating worker table in shared memory - max workers: %d, entry size: %ld, table size: %ld...", \
-        __FUNCTION__, MAX_WORKER_COUNT, entrySize, tableSize);
+        "Creating worker table in shared memory - max workers: %d, entry size: %ld, table size: %ld...", \
+        MAX_WORKER_COUNT, entrySize, tableSize);
 
     /* Do one big allocation and then set up the pointers to reference parts of it */
     void * tableBase = env_shared_malloc(tableSize);
@@ -85,7 +85,7 @@ SWorkerContext * ReserveWorkerContext(TWorkerId workerId) {
             }
         }
 
-        LogPrint(ELogSeverityLevel_Critical, "%s(): No free worker IDs found!", __FUNCTION__);
+        LogPrint(ELogSeverityLevel_Critical, "No free worker IDs found!");
         return NULL;
 
     } else {

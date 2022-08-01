@@ -4,6 +4,9 @@
 #include "../exception/signal_handlers.h"
 #include "../work/work.h"
 #include "../timing/timing.h"
+#include "../log/log.h"
+#include "../log/runtime_logger.h"
+#include "../log/startup_logger.h"
 #include <menabrea/exception.h>
 #include <menabrea/log.h>
 #include <event_machine/platform/env/environment.h>
@@ -74,7 +77,7 @@ void RunEventDispatchers(SEventDispatcherConfig * config) {
 
     /* Set up shared memory */
     s_platformShmem = CreatePlatformSharedMemory(config);
-    LogPrint(ELogSeverityLevel_Info, "%s(): Platform memory mapped at %p", __FUNCTION__, s_platformShmem);
+    LogPrint(ELogSeverityLevel_Info, "Platform memory mapped at %p", s_platformShmem);
 
     /* Install signal listeners */
     AssertTrue(0 == ListenForSignal(SIGCHLD, SigchldListener));
@@ -82,7 +85,6 @@ void RunEventDispatchers(SEventDispatcherConfig * config) {
 
     RunMainDispatcher();
 
-    LogPrint(ELogSeverityLevel_Info, "%s(): Freeing platform shared memory...", __FUNCTION__);
     env_shared_free(s_platformShmem);
 }
 
@@ -170,8 +172,7 @@ static bool SigintListener(int signo, const siginfo_t * siginfo) {
 static void RunMainDispatcher(void) {
 
     const char * procName = "disp_0";
-    LogPrint(ELogSeverityLevel_Info, "%s(): Changing process name to %s", \
-        __FUNCTION__, procName);
+    LogPrint(ELogSeverityLevel_Info, "Changing process name to %s...", procName);
     AssertTrue(0 == prctl(PR_SET_NAME, procName, 0, 0, 0));
 
     /* Initialize EM core */
@@ -179,6 +180,9 @@ static void RunMainDispatcher(void) {
 
     WorkInit(&s_platformShmem->WorkConfig);
     TimingInit();
+
+    LogPrint(ELogSeverityLevel_Info, "Switching to runtime logging...");
+    SetLoggerCallback(RuntimeLoggerCallback);
 
     RunApplicationsGlobalInits();
     SChildren * children = ForkChildDispatchers();
@@ -210,13 +214,16 @@ static void RunMainDispatcher(void) {
 
     /* Reap child processes */
     WaitForChildDispatchers(children);
+
+    /* Switch to back to startup logger */
+    SetLoggerCallback(StartupLoggerCallback);
 }
 
 static void DispatcherEntryPoint(void) {
 
     int core = em_core_id();
 
-    LogPrint(ELogSeverityLevel_Debug, "%s(): EM core %d initialized", __FUNCTION__, core);
+    LogPrint(ELogSeverityLevel_Debug, "EM core %d initialized", core);
 
     /* Wait for other dispatchers to initialize */
     odp_barrier_wait(&s_platformShmem->OdpStartBarrier);
@@ -224,22 +231,22 @@ static void DispatcherEntryPoint(void) {
     /* Do local initializaton of application libraries */
     RunApplicationsLocalInits();
 
-    LogPrint(ELogSeverityLevel_Debug, "%s(): Local inits complete on core %d", __FUNCTION__, core);
+    LogPrint(ELogSeverityLevel_Debug, "Local inits complete on core %d", core);
 
     /* Keep all cores dispatching until local init has returned in order to
      * handle sync-API function calls and to enter the main dispatch loop
      * almost at the same time */
     ActiveSync(&s_platformShmem->CompleteLocalAppInitsCounter);
 
-    LogPrint(ELogSeverityLevel_Debug, "%s(): Dispatcher %d entering the main dispatch loop...", \
-        __FUNCTION__, core);
+    LogPrint(ELogSeverityLevel_Debug, "Dispatcher %d entering the main dispatch loop...", \
+        core);
     RunDispatchLoops();
-    LogPrint(ELogSeverityLevel_Debug, "%s(): Dispatcher %d exited the main dispatch loop", \
-        __FUNCTION__, core);
+    LogPrint(ELogSeverityLevel_Debug, "Dispatcher %d exited the main dispatch loop", \
+        core);
 
     RunApplicationsLocalExits();
 
-    LogPrint(ELogSeverityLevel_Debug, "%s(): Local exit complete on core %d", __FUNCTION__, core);
+    LogPrint(ELogSeverityLevel_Debug, "Local exit complete on core %d", core);
 
     /* Continue dispatching until all cores have exited the dispatch
      * loop and until local exits have returned on all cores - the
@@ -253,8 +260,8 @@ static void RunApplicationsGlobalInits(void) {
     for (int i = 0; i < s_platformShmem->AppLibs->Count; i++) {
 
         SAppLib * appLib = &s_platformShmem->AppLibs->Libs[i];
-        LogPrint(ELogSeverityLevel_Info, "%s(): Running global init of %s...", \
-            __FUNCTION__, appLib->Name);
+        LogPrint(ELogSeverityLevel_Info, "Running global init of %s...", \
+            appLib->Name);
         appLib->GlobalInit();
     }
 }
@@ -262,8 +269,8 @@ static void RunApplicationsGlobalInits(void) {
 static SChildren * ForkChildDispatchers(void) {
 
     int cores = em_core_count();
-    LogPrint(ELogSeverityLevel_Info, "%s(): Spawning %d child dispatchers...", \
-        __FUNCTION__, cores - 1);
+    LogPrint(ELogSeverityLevel_Info, "Spawning %d child dispatchers...", \
+        cores - 1);
 
     SChildren * handles = malloc(sizeof(SChildren) + (cores - 1) * sizeof(pid_t));
     AssertTrue(handles != NULL);
@@ -352,8 +359,8 @@ static void RunApplicationsLocalInits(void) {
     for (int i = 0; i < s_platformShmem->AppLibs->Count; i++) {
 
         SAppLib * appLib = &s_platformShmem->AppLibs->Libs[i];
-        LogPrint(ELogSeverityLevel_Info, "%s(): Running local init of %s on core %d...", \
-            __FUNCTION__, appLib->Name, core);
+        LogPrint(ELogSeverityLevel_Info, "Running local init of %s on core %d...", \
+            appLib->Name, core);
         appLib->LocalInit(core);
     }
 }
@@ -402,8 +409,7 @@ static void FinalizeExit(void) {
     /* Drain any lingering events */
     DrainEvents();
 
-    LogPrint(ELogSeverityLevel_Debug, "%s(): Core %d done dispatching for good...", \
-        __FUNCTION__, core);
+    LogPrint(ELogSeverityLevel_Debug, "Core %d done dispatching for good...", core);
 
     /* Wait for other dispatchers to leave their dispatch loops */
     odp_barrier_wait(&s_platformShmem->OdpExitBarrier);
@@ -420,8 +426,8 @@ static void RunApplicationsLocalExits(void) {
     for (int i = 0; i < s_platformShmem->AppLibs->Count; i++) {
 
         SAppLib * appLib = &s_platformShmem->AppLibs->Libs[i];
-        LogPrint(ELogSeverityLevel_Info, "%s(): Running local exit of %s on core %d...", \
-            __FUNCTION__, appLib->Name, core);
+        LogPrint(ELogSeverityLevel_Info, "Running local exit of %s on core %d...", \
+            appLib->Name, core);
         appLib->LocalExit(core);
     }
 }
@@ -431,8 +437,8 @@ static void RunApplicationsGlobalExits(void) {
     for (int i = 0; i < s_platformShmem->AppLibs->Count; i++) {
 
         SAppLib * appLib = &s_platformShmem->AppLibs->Libs[i];
-        LogPrint(ELogSeverityLevel_Info, "%s(): Running global exit of %s...", \
-            __FUNCTION__, appLib->Name);
+        LogPrint(ELogSeverityLevel_Info, "Running global exit of %s...", \
+            appLib->Name);
         appLib->GlobalExit();
     }
 }
@@ -451,18 +457,18 @@ static void WaitForChildDispatchers(SChildren * children) {
 
             if (WIFEXITED(status)) {
 
-                LogPrint(ELogSeverityLevel_Info, "%s(): Child %d exited with status %d", \
-                    __FUNCTION__, children->Pids[i], WEXITSTATUS(status));
+                LogPrint(ELogSeverityLevel_Info, "Child %d exited with status %d", \
+                    children->Pids[i], WEXITSTATUS(status));
 
             } else if (WIFSIGNALED(status)) {
 
-                LogPrint(ELogSeverityLevel_Info, "%s(): Child %d was killed by signal %d", \
-                    __FUNCTION__, children->Pids[i], WTERMSIG(status));
+                LogPrint(ELogSeverityLevel_Info, "Child %d was killed by signal %d", \
+                    children->Pids[i], WTERMSIG(status));
 
             } else {
 
-                LogPrint(ELogSeverityLevel_Warning, "%s(): Unexpected status of child %d: %d", \
-                    __FUNCTION__, children->Pids[i], status);
+                LogPrint(ELogSeverityLevel_Warning, "Unexpected status of child %d: %d", \
+                    children->Pids[i], status);
             }
 
         } else {

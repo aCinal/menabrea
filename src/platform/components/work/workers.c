@@ -19,22 +19,18 @@ static void WorkerEoReceive(void * eoCtx, em_event_t event, em_event_type_t type
 
 void WorkInit(SWorkConfig * config) {
 
-    LogPrint(ELogSeverityLevel_Debug, "%s(): Workers framework initialization started", __FUNCTION__);
     SetUpQueueGroups();
     WorkerTableInit(config->GlobalWorkerId);
     MessagingInit(&config->MessagingPoolConfig);
     DeployCompletionDaemon();
-    LogPrint(ELogSeverityLevel_Debug, "%s(): Workers framework initialized successfully", __FUNCTION__);
 }
 
 void WorkTeardown(void) {
 
-    LogPrint(ELogSeverityLevel_Debug, "%s(): Workers framework teardown started", __FUNCTION__);
     CompletionDaemonTeardown();
     WorkerTableTeardown();
     MessagingTeardown();
     TearDownQueueGroups();
-    LogPrint(ELogSeverityLevel_Debug, "%s(): Workers framework torn down gracefully", __FUNCTION__);
 }
 
 TWorkerId DeployWorker(const SWorkerConfig * config) {
@@ -42,8 +38,8 @@ TWorkerId DeployWorker(const SWorkerConfig * config) {
     AssertTrue(config != NULL);
     if (unlikely(config->WorkerBody == NULL)) {
 
-        LogPrint(ELogSeverityLevel_Warning, "Attempted to register worker '%s' without a body function", \
-            config->Name);
+        LogPrint(ELogSeverityLevel_Warning, "%s(): Attempted to register worker '%s' without a body function", \
+            __FUNCTION__, config->Name);
         return WORKER_ID_INVALID;
     }
 
@@ -54,8 +50,8 @@ TWorkerId DeployWorker(const SWorkerConfig * config) {
     SWorkerContext * context = ReserveWorkerContext(config->WorkerId);
     if (unlikely(context == NULL)) {
 
-        LogPrint(ELogSeverityLevel_Error, "Failed to reserve context for worker '%s'", \
-            config->Name);
+        LogPrint(ELogSeverityLevel_Error, "%s(): Failed to reserve context for worker '%s'", \
+            __FUNCTION__, config->Name);
         return WORKER_ID_INVALID;
     }
     context->UserInit = config->UserInit;
@@ -73,8 +69,8 @@ TWorkerId DeployWorker(const SWorkerConfig * config) {
     em_event_t notifEvent = em_alloc(sizeof(TWorkerId), EM_EVENT_TYPE_SW, EM_POOL_DEFAULT);
     if (unlikely(notifEvent == EM_EVENT_UNDEF)) {
 
-        LogPrint(ELogSeverityLevel_Error, "Failed to allocate a notification event when deploying worker '%s'", \
-            context->Name);
+        LogPrint(ELogSeverityLevel_Error, "%s(): Failed to allocate a notification event when deploying worker '%s'", \
+            __FUNCTION__, context->Name);
         ReleaseWorkerContext(context->WorkerId);
         return WORKER_ID_INVALID;
     }
@@ -96,8 +92,8 @@ TWorkerId DeployWorker(const SWorkerConfig * config) {
 
     if (unlikely(eo == EM_EO_UNDEF)) {
 
-        LogPrint(ELogSeverityLevel_Error, "Failed to create execution object for worker '%s'", \
-            context->Name);
+        LogPrint(ELogSeverityLevel_Error, "%s(): Failed to create execution object for worker '%s'", \
+            __FUNCTION__, context->Name);
         em_free(notifEvent);
         ReleaseWorkerContext(context->WorkerId);
         return WORKER_ID_INVALID;
@@ -114,8 +110,8 @@ TWorkerId DeployWorker(const SWorkerConfig * config) {
 
     if (unlikely(queue == EM_QUEUE_UNDEF)) {
 
-        LogPrint(ELogSeverityLevel_Error, "Failed to create queue for worker '%s'", \
-            context->Name);
+        LogPrint(ELogSeverityLevel_Error, "%s(): Failed to create queue for worker '%s'", \
+            __FUNCTION__, context->Name);
         em_free(notifEvent);
         ReleaseWorkerContext(context->WorkerId);
         (void) em_eo_delete(eo);
@@ -138,8 +134,8 @@ TWorkerId DeployWorker(const SWorkerConfig * config) {
     /* Start the EO */
     if (unlikely(EM_OK != em_eo_start(eo, NULL, NULL, 1, &notif))) {
 
-        LogPrint(ELogSeverityLevel_Error, "Failed to start the EO of worker '%s' (queue: %" PRI_QUEUE ", eo: %" PRI_EO ")", \
-            context->Name, context->Queue, context->Eo);
+        LogPrint(ELogSeverityLevel_Error, "%s(): Failed to start the EO of worker '%s' (queue: %" PRI_QUEUE ", eo: %" PRI_EO ")", \
+            __FUNCTION__, context->Name, context->Queue, context->Eo);
         em_free(notifEvent);
         ReleaseWorkerContext(context->WorkerId);
         /* Starting from EM-ODP v1.2.3 em_eo_delete() should remove all the remaining queues and
@@ -164,8 +160,8 @@ void TerminateWorker(TWorkerId workerId) {
 
     if (WorkerIdGetGlobal(realId) != GetGlobalWorkerId()) {
 
-        LogPrint(ELogSeverityLevel_Warning, "Attempted to terminate remote worker 0x%x", \
-            workerId);
+        LogPrint(ELogSeverityLevel_Warning, "%s(): Attempted to terminate remote worker 0x%x", \
+            __FUNCTION__, workerId);
         return;
     }
 
@@ -204,8 +200,8 @@ void TerminateWorker(TWorkerId workerId) {
 
             UnlockWorkerTableEntry(realId);
             /* Termination requested flag was already set */
-            LogPrint(ELogSeverityLevel_Warning, "Worker 0x%x's termination already requested", \
-                realId);
+            LogPrint(ELogSeverityLevel_Warning, "%s(): Worker 0x%x's termination already requested", \
+                __FUNCTION__, realId);
         }
         break;
 
