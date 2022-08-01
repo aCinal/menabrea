@@ -44,6 +44,7 @@ void MarkDeploymentSuccessful(TWorkerId workerId);
 void MarkTeardownInProgress(TWorkerId workerId);
 void LockWorkerTableEntry(TWorkerId workerId);
 void UnlockWorkerTableEntry(TWorkerId workerId);
+TWorkerId GetGlobalWorkerId(void);
 TWorkerId MakeWorkerIdGlobal(TWorkerId localId);
 
 #endif /* PLATFORM_COMPONENTS_WORK_WORKER_TABLE_H */

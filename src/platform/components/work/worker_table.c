@@ -177,6 +177,13 @@ void UnlockWorkerTableEntry(TWorkerId workerId) {
     env_spinlock_unlock(&s_workerTable[localId]->Lock);
 }
 
+TWorkerId GetGlobalWorkerId(void) {
+
+    /* Assert global ID configured for this node */
+    AssertTrue(s_globalWorkerId != WORKER_ID_INVALID);
+    return s_globalWorkerId;
+}
+
 TWorkerId MakeWorkerIdGlobal(TWorkerId localId) {
 
     /* Assert global ID configured for this node */

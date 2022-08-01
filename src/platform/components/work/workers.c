@@ -160,7 +160,14 @@ TWorkerId DeployWorker(const SWorkerConfig * config) {
 void TerminateWorker(TWorkerId workerId) {
 
     /* If called with WORKER_ID_INVALID, terminate current worker */
-    TWorkerId realId = workerId == WORKER_ID_INVALID ? GetOwnWorkerId() : workerId;
+    TWorkerId realId = (workerId == WORKER_ID_INVALID) ? GetOwnWorkerId() : workerId;
+
+    if (WorkerIdGetGlobal(realId) != GetGlobalWorkerId()) {
+
+        LogPrint(ELogSeverityLevel_Warning, "Attempted to terminate remote worker 0x%x", \
+            workerId);
+        return;
+    }
 
     LogPrint(ELogSeverityLevel_Info, "Terminating worker 0x%x...", realId);
 
