@@ -12,6 +12,18 @@ DEPENDS = " \
     em-odp \
     "
 
+PLATFORM_CONFIG_PATH:menabrea-node1 := "node1/platform_config.json"
+PLATFORM_CONFIG_PATH:menabrea-node2 := "node2/platform_config.json"
+PLATFORM_CONFIG_PATH:menabrea-node3 := "node3/platform_config.json"
+PLATFORM_CONFIG_PATH:menabrea-qemu := "qemu/platform_config.json"
+SRC_URI += "file://${PLATFORM_CONFIG_PATH}"
+
+do_install:append() {
+
+    install -d ${D}/opt
+    install -m 755 ${WORKDIR}/${PLATFORM_CONFIG_PATH} ${D}/opt
+}
+
 FILES:${PN} += "/opt"
 
 inherit cmake

@@ -34,6 +34,10 @@ bitbake-layers add-layer ../layers/meta-raspberrypi &&
 echo "Adding OpenEventMachine/OpenDataPlane layer..." &&
 bitbake-layers add-layer ../layers/meta-em-odp &&
 
+# Add core image layer
+echo "Adding core image layer..." &&
+bitbake-layers add-layer ../layers/meta-menabrea &&
+
 # Add kernel customization layer
 echo "Adding kernel customization and device drivers layer..." &&
 bitbake-layers add-layer ../layers/meta-menabrea-kernel &&

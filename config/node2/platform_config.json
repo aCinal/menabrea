@@ -1,0 +1,65 @@
+{
+    "event_pools": {
+        "default": {
+            "num_subpools": 4,
+            "subpool": [
+                {
+                    "size": 256,
+                    "num": 16348,
+                    "cache_size": 64
+                },
+                {
+                    "size": 512,
+                    "num": 1024,
+                    "cache_size": 32
+                },
+                {
+                    "size": 1024,
+                    "num": 1024,
+                    "cache_size": 16
+                },
+                {
+                    "size": 2048,
+                    "num": 1024,
+                    "cache_size": 8
+                }
+            ]
+        },
+
+        "messaging": {
+            "num_subpools": 4,
+            "subpool": [
+                {
+                    "size": 256,
+                    "num": 16348,
+                    "cache_size": 64
+                },
+                {
+                    "size": 512,
+                    "num": 1024,
+                    "cache_size": 32
+                },
+                {
+                    "size": 1024,
+                    "num": 1024,
+                    "cache_size": 16
+                },
+                {
+                    "size": 2048,
+                    "num": 1024,
+                    "cache_size": 8
+                }
+            ]
+        }
+    },
+
+    "workers": {
+        "own_node_id": 2
+    },
+
+    "environment": {
+        "EM_CONFIG_FILE": null,
+        "MENABREA_APP_LIST": "libdeployring.so.1.0.0:liblocaldata.so.1.0.0",
+        "LOG_VERBOSE": 1
+    }
+}

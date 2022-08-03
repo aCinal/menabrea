@@ -4,4 +4,6 @@
 CMDLINE:append = " isolcpus=1,2,3"
 
 # Use static IP during development
-CMDLINE:append = " ip=192.168.137.2"
+CMDLINE:append:menabrea-node1 = " ip=192.168.137.1"
+CMDLINE:append:menabrea-node2 = " ip=192.168.137.2"
+CMDLINE:append:menabrea-node3 = " ip=192.168.137.3"
