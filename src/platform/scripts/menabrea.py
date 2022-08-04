@@ -20,7 +20,7 @@ def main() -> None:
     spawn_platform_subprocess(command_line)
 
 def parse_platform_config_file(pathname: str) -> Dict[str, Any]:
-    """Parse platform configuration file (YAML)."""
+    """Parse platform configuration file."""
     with open(pathname) as fstream:
         return json.load(fstream)
 
