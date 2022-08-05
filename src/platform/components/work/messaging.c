@@ -184,9 +184,9 @@ static void RouteMessage(TMessage message) {
     SMessage * msgData = (SMessage *) em_event_pointer(message);
     TWorkerId receiver = msgData->Header.Receiver;
 
-/* TODO: Implement me! */
-#define IsLocalWorker(__worker) true
-    if (IsLocalWorker(receiver)) {
+    if (WorkerIdGetNode(receiver) == GetOwnNodeId()) {
+
+        /* Worker local to the current node - enqueue the message via EM */
 
         /* Lock the entry to ensure the queue is still valid when em_send() gets called */
         LockWorkerTableEntry(receiver);
@@ -239,6 +239,8 @@ static void RouteMessage(TMessage message) {
         }
 
     } else {
+
+        /* Remote worker - push the message out a network interface */
 
         /* TODO: Implement EM chaining and find the relevant queue here */
         LogPrint(ELogSeverityLevel_Critical, "Routing to remote workers not supported at the moment!");

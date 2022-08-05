@@ -17,13 +17,12 @@
 static void ResetContext(SWorkerContext * context);
 
 static SWorkerContext * s_workerTable[MAX_WORKER_COUNT];
-static TWorkerId s_globalWorkerId = WORKER_ID_INVALID;
+static TWorkerId s_ownNodeId = WORKER_ID_INVALID;
 
-void WorkerTableInit(TWorkerId globalWorkerId) {
+void WorkerTableInit(TWorkerId nodeId) {
 
-    s_globalWorkerId = globalWorkerId;
-    LogPrint(ELogSeverityLevel_Info, "Global worker ID set to 0x%x", \
-        s_globalWorkerId);
+    s_ownNodeId = nodeId;
+    LogPrint(ELogSeverityLevel_Info, "Node ID set to 0x%x", s_ownNodeId);
 
     int cores = em_core_count();
     /* Take into account per-core application private data - align with cache line */
@@ -75,7 +74,7 @@ SWorkerContext * ReserveWorkerContext(TWorkerId workerId) {
 
                     /* Free slot found, reserve it */
                     s_workerTable[id]->State = EWorkerState_Deploying;
-                    s_workerTable[id]->WorkerId = MakeWorkerId(GetOwnGlobalId(), id);
+                    s_workerTable[id]->WorkerId = MakeWorkerId(GetOwnNodeId(), id);
                     UnlockWorkerTableEntry(id);
                     return s_workerTable[id];
                 }
@@ -110,7 +109,7 @@ SWorkerContext * ReserveWorkerContext(TWorkerId workerId) {
         }
         /* Reserve the entry */
         s_workerTable[localId]->State = EWorkerState_Deploying;
-        s_workerTable[localId]->WorkerId = MakeWorkerId(GetOwnGlobalId(), localId);
+        s_workerTable[localId]->WorkerId = MakeWorkerId(GetOwnNodeId(), localId);
         UnlockWorkerTableEntry(workerId);
         return s_workerTable[localId];
     }
@@ -177,11 +176,11 @@ void UnlockWorkerTableEntry(TWorkerId workerId) {
     env_spinlock_unlock(&s_workerTable[localId]->Lock);
 }
 
-TWorkerId GetOwnGlobalId(void) {
+TWorkerId GetOwnNodeId(void) {
 
-    /* Assert global ID configured for this node */
-    AssertTrue(s_globalWorkerId != WORKER_ID_INVALID);
-    return s_globalWorkerId;
+    /* Assert node ID has been configured */
+    AssertTrue(s_ownNodeId != WORKER_ID_INVALID);
+    return s_ownNodeId;
 }
 
 static void ResetContext(SWorkerContext * context) {

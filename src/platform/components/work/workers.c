@@ -20,7 +20,7 @@ static void WorkerEoReceive(void * eoCtx, em_event_t event, em_event_type_t type
 void WorkInit(SWorkConfig * config) {
 
     SetUpQueueGroups();
-    WorkerTableInit(config->GlobalWorkerId);
+    WorkerTableInit(config->NodeId);
     MessagingInit(&config->MessagingPoolConfig);
     DeployCompletionDaemon();
 }
@@ -158,7 +158,7 @@ void TerminateWorker(TWorkerId workerId) {
     /* If called with WORKER_ID_INVALID, terminate current worker */
     TWorkerId realId = (workerId == WORKER_ID_INVALID) ? GetOwnWorkerId() : workerId;
 
-    if (WorkerIdGetGlobal(realId) != GetOwnGlobalId()) {
+    if (WorkerIdGetNode(realId) != GetOwnNodeId()) {
 
         LogPrint(ELogSeverityLevel_Warning, "%s(): Attempted to terminate remote worker 0x%x", \
             __FUNCTION__, workerId);
@@ -293,7 +293,7 @@ void TerminateAllWorkers(void) {
         SWorkerContext * context = FetchWorkerContext(i);
         if (context->State == EWorkerState_Active) {
 
-            TerminateWorker(MakeWorkerId(GetOwnGlobalId(), i));
+            TerminateWorker(MakeWorkerId(GetOwnNodeId(), i));
         }
     }
 }

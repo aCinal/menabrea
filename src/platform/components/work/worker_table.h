@@ -35,7 +35,7 @@ typedef struct SWorkerContext {
     void * Private[0];
 } SWorkerContext;
 
-void WorkerTableInit(TWorkerId globalWorkerId);
+void WorkerTableInit(TWorkerId nodeId);
 void WorkerTableTeardown(void);
 SWorkerContext * ReserveWorkerContext(TWorkerId workerId);
 void ReleaseWorkerContext(TWorkerId workerId);

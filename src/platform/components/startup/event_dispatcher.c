@@ -184,7 +184,7 @@ static void RunMainDispatcher(void) {
     AssertTrue(EM_OK == em_init_core());
 
     WorkInit(&s_platformShmem->WorkConfig);
-    NetworkingInit(s_platformShmem->NetworkInterface, s_platformShmem->WorkConfig.GlobalWorkerId);
+    NetworkingInit(s_platformShmem->NetworkInterface, s_platformShmem->WorkConfig.NodeId);
     TimingInit();
 
     LogPrint(ELogSeverityLevel_Info, "Switching to runtime logging...");

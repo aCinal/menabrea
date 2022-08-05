@@ -21,7 +21,7 @@ SStartupParams * ParseCommandLine(int argc, char **argv) {
     const struct option longOptions[] = {
         { "defaultPoolConfig", required_argument, NULL, 0},
         { "messagingPoolConfig", required_argument, NULL, 0 },
-        { "globalWorkerId", required_argument, NULL, 0 },
+        { "nodeId", required_argument, NULL, 0 },
         { "netIf", required_argument, NULL, 0 },
         { 0, 0, 0, 0 }
     };
@@ -50,14 +50,14 @@ SStartupParams * ParseCommandLine(int argc, char **argv) {
             break;
 
         case 2:
-            AssertTrue(0 == strcmp("globalWorkerId", longOptions[optionIndex].name));
-            LogPrint(ELogSeverityLevel_Debug, "Parsing global worker ID...");
-            params->GlobalWorkerId = strtol(optarg, &endptr, 0);
+            AssertTrue(0 == strcmp("nodeId", longOptions[optionIndex].name));
+            LogPrint(ELogSeverityLevel_Debug, "Parsing node ID...");
+            params->NodeId = strtol(optarg, &endptr, 0);
             /* Assert a number was parsed */
             AssertTrue(endptr != optarg);
-            AssertTrue(params->GlobalWorkerId <= MAX_GLOBAL_WORKER_ID);
-            LogPrint(ELogSeverityLevel_Debug, "Global worker ID set to %d", \
-                params->GlobalWorkerId);
+            AssertTrue(params->NodeId <= MAX_NODE_ID);
+            LogPrint(ELogSeverityLevel_Debug, "Node ID set to %d", \
+                params->NodeId);
             break;
 
         case 3:
@@ -78,9 +78,9 @@ SStartupParams * ParseCommandLine(int argc, char **argv) {
         }
     }
 
-    /* Assert global worker ID has been set - we cannot rely on
+    /* Assert node ID has been set - we cannot rely on
      * any defaults here */
-    AssertTrue(params->GlobalWorkerId != WORKER_ID_INVALID);
+    AssertTrue(params->NodeId != WORKER_ID_INVALID);
 
     return params;
 }
@@ -91,7 +91,7 @@ static void SetDefaults(SStartupParams * params) {
     SetDefaultPoolConfig(&params->DefaultPoolConfig);
     SetDefaultPoolConfig(&params->MessagingPoolConfig);
 
-    params->GlobalWorkerId = WORKER_ID_INVALID;
+    params->NodeId = WORKER_ID_INVALID;
 
     (void) strcpy(params->NetworkInterface, "eth0");
 }

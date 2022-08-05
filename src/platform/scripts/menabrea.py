@@ -35,11 +35,11 @@ def format_command_line(config: Dict[str, Any]) -> List[str]:
     """Prepare command-line arguments based on the parsed config."""
     command_line = []
 
-    global_worker_id = config["workers"]["own_node_id"]
-    command_line.append("--globalWorkerId")
-    command_line.append(f"{global_worker_id}")
+    node_id = config["node_id"]
+    command_line.append("--nodeId")
+    command_line.append(f"{node_id}")
 
-    network_if = config["workers"]["network_if"]
+    network_if = config["network_if"]
     command_line.append("--netIf")
     command_line.append(f"{network_if}")
 

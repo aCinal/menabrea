@@ -53,10 +53,8 @@
         }
     },
 
-    "workers": {
-        "own_node_id": 2,
-        "network_if": "eth0"
-    },
+    "node_id": 2,
+    "network_if": "eth0",
 
     "environment": {
         "EM_CONFIG_FILE": null,

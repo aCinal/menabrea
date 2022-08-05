@@ -61,7 +61,7 @@ int main(int argc, char **argv) {
         .AppLibs = appLibs,
         .WorkConfig = {
             .MessagingPoolConfig = TranslateToEmPoolConfig(&startupParams->MessagingPoolConfig),
-            .GlobalWorkerId = startupParams->GlobalWorkerId,
+            .NodeId = startupParams->NodeId,
         }
     };
     (void) strcpy(dispatcherConfig.NetworkInterface, startupParams->NetworkInterface);

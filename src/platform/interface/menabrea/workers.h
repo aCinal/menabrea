@@ -18,10 +18,11 @@ typedef em_event_t TMessage;                                 /**< Opaque message
 
 #define WORKER_LOCAL_ID_MASK    0x0FFF                       /**< Mask of the local part of the worker ID */
 #define WORKER_LOCAL_ID_BITS    12                           /**< Bitlength of the local part of the worker ID */
-#define WORKER_GLOBAL_ID_MASK   0xF000                       /**< Mask of the global part of the worker ID */
-#define WORKER_GLOBAL_ID_BITS   4                            /**< Bitlength of the global part of the worker ID */
+#define WORKER_NODE_ID_MASK     0xF000                       /**< Mask of the node part of the worker ID */
+#define WORKER_NODE_ID_BITS     4                            /**< Bitlength of the node part of the worker ID */
+#define WORKER_NODE_ID_SHIFT    WORKER_LOCAL_ID_BITS         /**< Shift of the node ID in a global (fully qualified) worker ID */
 
-#define MAX_GLOBAL_WORKER_ID    3                            /**< Maximum value of the global part of the worker ID (equal to the number of nodes in the system) */
+#define MAX_NODE_ID             3                            /**< Maximum value of the node ID (equal to the number of nodes in the system) */
 #define MAX_WORKER_COUNT        (1 << WORKER_LOCAL_ID_BITS)  /**< Maximum number of workers deployable */
 
 /* Assert consistency between constants at compile time */
@@ -29,18 +30,18 @@ ODP_STATIC_ASSERT(WORKER_ID_DYNAMIC_BASE < MAX_WORKER_COUNT, \
     "WORKER_ID_DYNAMIC_BASE must be less than MAX_WORKER_COUNT");
 ODP_STATIC_ASSERT(WORKER_LOCAL_ID_BITS < sizeof(TWorkerId) * 8, \
     "WORKER_LOCAL_ID_BITS too large");
-ODP_STATIC_ASSERT(WORKER_LOCAL_ID_BITS + WORKER_GLOBAL_ID_BITS == sizeof(TWorkerId) * 8, \
-    "WORKER_LOCAL_ID_BITS + WORKER_GLOBAL_ID_BITS inconsistent");
+ODP_STATIC_ASSERT(WORKER_LOCAL_ID_BITS + WORKER_NODE_ID_BITS == sizeof(TWorkerId) * 8, \
+    "WORKER_LOCAL_ID_BITS + WORKER_NODE_ID_BITS inconsistent");
 ODP_STATIC_ASSERT(WORKER_ID_INVALID > MAX_WORKER_COUNT, \
     "WORKER_ID_INVALID must be outside the MAX_WORKER_COUNT range");
 
 /**
- * @brief Retrieve the global part of a worker ID
+ * @brief Retrieve the node part of a worker ID
  * @param id Worker ID
- * @return Global part of a worker ID
+ * @return Node part of a worker ID
  */
-static inline TWorkerId WorkerIdGetGlobal(TWorkerId id) {
-    return (id & WORKER_GLOBAL_ID_MASK) >> WORKER_LOCAL_ID_BITS;
+static inline TWorkerId WorkerIdGetNode(TWorkerId id) {
+    return (id & WORKER_NODE_ID_MASK) >> WORKER_NODE_ID_SHIFT;
 }
 
 /**
@@ -53,21 +54,21 @@ static inline TWorkerId WorkerIdGetLocal(TWorkerId id) {
 }
 
 /**
- * @brief Combine global and local parts of worker ID
- * @param globalId Global part of a worker ID
- * @param localId Local part of a worker ID
- * @return Resulting fully-qualified worker ID
+ * @brief Combine node ID and local ID of the worker
+ * @param nodeId Node ID of the worker
+ * @param localId Local worker ID
+ * @return Fully qualified global worker ID
  */
-static inline TWorkerId MakeWorkerId(TWorkerId globalId, TWorkerId localId) {
-    return ( (globalId << WORKER_LOCAL_ID_BITS) & WORKER_GLOBAL_ID_MASK ) \
+static inline TWorkerId MakeWorkerId(TWorkerId nodeId, TWorkerId localId) {
+    return ( (nodeId << WORKER_NODE_ID_SHIFT) & WORKER_NODE_ID_MASK ) \
         | (localId & WORKER_LOCAL_ID_MASK);
 }
 
 /**
- * @brief Get global part of local workers's worker IDs
- * @return Current node's global worker ID
+ * @brief Get current node's ID
+ * @return Current node's ID
  */
-TWorkerId GetOwnGlobalId(void);
+TWorkerId GetOwnNodeId(void);
 
 /**
  * @brief User-provided global initialization function
