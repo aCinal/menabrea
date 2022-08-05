@@ -6,6 +6,7 @@
 #include <assert.h>
 #include <dlfcn.h>
 #include <stdbool.h>
+#include <errno.h>
 #include <string.h>
 #include <stdio.h>
 #include <sys/prctl.h>
@@ -437,9 +438,10 @@ static void PrintProcessInfo(void) {
     (void) prctl(PR_GET_NAME, procName, 0, 0, 0);
 
     LogPrint(ELogSeverityLevel_Info, "============== PROCESS INFO ==============");
-    LogPrint(ELogSeverityLevel_Info, "    Name:  %s", procName);
-    LogPrint(ELogSeverityLevel_Info, "    PID:   %d", getpid());
-    LogPrint(ELogSeverityLevel_Info, "    PPID:  %d", getppid());
+    LogPrint(ELogSeverityLevel_Info, "    Name:   %s", procName);
+    LogPrint(ELogSeverityLevel_Info, "    PID:    %d", getpid());
+    LogPrint(ELogSeverityLevel_Info, "    PPID:   %d", getppid());
+    LogPrint(ELogSeverityLevel_Info, "    errno:  %d (%s)", errno, strerror(errno));
     LogPrint(ELogSeverityLevel_Info, "==========================================");
 }
 
