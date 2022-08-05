@@ -39,6 +39,10 @@ def format_command_line(config: Dict[str, Any]) -> List[str]:
     command_line.append("--globalWorkerId")
     command_line.append(f"{global_worker_id}")
 
+    network_if = config["workers"]["network_if"]
+    command_line.append("--netIf")
+    command_line.append(f"{network_if}")
+
     command_line.append("--messagingPoolConfig")
     command_line.append(serialize_event_pool_config(config["event_pools"]["default"]))
 

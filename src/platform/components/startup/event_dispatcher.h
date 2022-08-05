@@ -6,6 +6,7 @@
 #include <odp_api.h>
 #include <event_machine.h>
 #include "../work/work.h"
+#include <net/if.h>
 
 typedef struct SEventDispatcherConfig {
     int Cores;
@@ -13,6 +14,7 @@ typedef struct SEventDispatcherConfig {
     em_conf_t * EmConf;
     SAppLibsSet * AppLibs;
     SWorkConfig WorkConfig;
+    char NetworkInterface[IFNAMSIZ];
 } SEventDispatcherConfig;
 
 void RunEventDispatchers(SEventDispatcherConfig * config);

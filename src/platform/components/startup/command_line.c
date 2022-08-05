@@ -22,6 +22,7 @@ SStartupParams * ParseCommandLine(int argc, char **argv) {
         { "defaultPoolConfig", required_argument, NULL, 0},
         { "messagingPoolConfig", required_argument, NULL, 0 },
         { "globalWorkerId", required_argument, NULL, 0 },
+        { "netIf", required_argument, NULL, 0 },
         { 0, 0, 0, 0 }
     };
     int optionIndex;
@@ -53,10 +54,20 @@ SStartupParams * ParseCommandLine(int argc, char **argv) {
             LogPrint(ELogSeverityLevel_Debug, "Parsing global worker ID...");
             params->GlobalWorkerId = strtol(optarg, &endptr, 0);
             /* Assert a number was parsed */
-            AssertTrue(optarg != endptr);
+            AssertTrue(endptr != optarg);
             AssertTrue(params->GlobalWorkerId <= MAX_GLOBAL_WORKER_ID);
             LogPrint(ELogSeverityLevel_Debug, "Global worker ID set to %d", \
                 params->GlobalWorkerId);
+            break;
+
+        case 3:
+            AssertTrue(0 == strcmp("netIf", longOptions[optionIndex].name));
+            LogPrint(ELogSeverityLevel_Debug, "Parsing network interface...");
+            /* Copy the name and ensure proper NULL-termination (see strncpy manpage) */
+            (void) strncpy(params->NetworkInterface, optarg, sizeof(params->NetworkInterface) - 1);
+            params->NetworkInterface[sizeof(params->NetworkInterface) - 1] = '\0';
+            LogPrint(ELogSeverityLevel_Debug, "Network interface set to '%s'", \
+                params->NetworkInterface);
             break;
 
         default:
@@ -81,6 +92,8 @@ static void SetDefaults(SStartupParams * params) {
     SetDefaultPoolConfig(&params->MessagingPoolConfig);
 
     params->GlobalWorkerId = WORKER_ID_INVALID;
+
+    (void) strcpy(params->NetworkInterface, "eth0");
 }
 
 static void SetDefaultPoolConfig(SPoolConfig * poolConfig) {

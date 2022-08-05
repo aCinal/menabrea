@@ -13,6 +13,7 @@ add_compile_definitions(PRIVATE ENV_64_BIT)
 
 add_subdirectory(exception)
 add_subdirectory(log)
+add_subdirectory(networking)
 add_subdirectory(startup)
 add_subdirectory(timing)
 add_subdirectory(work)
@@ -21,6 +22,7 @@ target_link_libraries(menabrea
     # Link against platform components
     exception
     log
+    networking
     startup
     timing
     work

@@ -7,6 +7,7 @@
 #include "../log/log.h"
 #include "../log/runtime_logger.h"
 #include "../log/startup_logger.h"
+#include "../networking/networking.h"
 #include <menabrea/exception.h>
 #include <menabrea/log.h>
 #include <event_machine/platform/env/environment.h>
@@ -57,6 +58,8 @@ typedef struct SStartupSharedMemory {
     SAppLibsSet * AppLibs;
     /* Work subsystem configuration */
     SWorkConfig WorkConfig;
+    /* Network interface name */
+    char NetworkInterface[IFNAMSIZ];
     /* ODP barriers for EM-cores synchronization */
     odp_barrier_t OdpStartBarrier;
     odp_barrier_t OdpExitBarrier;
@@ -100,6 +103,8 @@ static SStartupSharedMemory * CreatePlatformSharedMemory(SEventDispatcherConfig 
     shmPtr->AppLibs = config->AppLibs;
     shmPtr->DispatcherExitFlag = 0;
     shmPtr->WorkConfig = config->WorkConfig;
+
+    (void) strcpy(shmPtr->NetworkInterface, config->NetworkInterface);
 
     /* Initialize the sync primitives */
     odp_barrier_init(&shmPtr->OdpStartBarrier, config->Cores);
@@ -179,6 +184,7 @@ static void RunMainDispatcher(void) {
     AssertTrue(EM_OK == em_init_core());
 
     WorkInit(&s_platformShmem->WorkConfig);
+    NetworkingInit(s_platformShmem->NetworkInterface, s_platformShmem->WorkConfig.GlobalWorkerId);
     TimingInit();
 
     LogPrint(ELogSeverityLevel_Info, "Switching to runtime logging...");
@@ -207,6 +213,7 @@ static void RunMainDispatcher(void) {
 
     /* Close up shop */
     TimingTeardown();
+    NetworkingTeardown();
     WorkTeardown();
 
     /* Dispatch lingering events and exit */

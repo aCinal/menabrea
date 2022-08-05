@@ -5,6 +5,7 @@
 #include <menabrea/common.h>
 #include <menabrea/workers.h>
 #include <event_machine.h>
+#include <net/if.h>
 
 /* Use own structures for pool config so that no one tries to
  * call em_pool_cfg_init() on them. This leads to a segfault
@@ -25,6 +26,7 @@ typedef struct SStartupParams {
     SPoolConfig DefaultPoolConfig;
     SPoolConfig MessagingPoolConfig;
     TWorkerId GlobalWorkerId;
+    char NetworkInterface[IFNAMSIZ];
 } SStartupParams;
 
 SStartupParams * ParseCommandLine(int argc, char **argv);

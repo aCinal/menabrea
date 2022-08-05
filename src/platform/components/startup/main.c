@@ -64,6 +64,7 @@ int main(int argc, char **argv) {
             .GlobalWorkerId = startupParams->GlobalWorkerId,
         }
     };
+    (void) strcpy(dispatcherConfig.NetworkInterface, startupParams->NetworkInterface);
     /* Free startup params as not needed anymore */
     free(startupParams);
     RunEventDispatchers(&dispatcherConfig);

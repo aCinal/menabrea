@@ -54,7 +54,8 @@
     },
 
     "workers": {
-        "own_node_id": 3
+        "own_node_id": 3,
+        "network_if": "eth0"
     },
 
     "environment": {
