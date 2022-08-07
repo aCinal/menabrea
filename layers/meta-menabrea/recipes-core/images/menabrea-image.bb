@@ -9,6 +9,7 @@ CORE_IMAGE_EXTRA_INSTALL += "menabrea-platform"
 CORE_IMAGE_EXTRA_INSTALL += "menabrea-drivers"
 CORE_IMAGE_EXTRA_INSTALL += "em-odp"
 CORE_IMAGE_EXTRA_INSTALL += "python3"
+CORE_IMAGE_EXTRA_INSTALL += "tcpdump"
 
 # Automatically load kernel modules at boot
 KERNEL_MODULE_AUTOLOAD += "pangloss-driver"
