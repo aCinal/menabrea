@@ -7,3 +7,6 @@ DISTRO_FEATURES_BACKFILL_CONSIDERED = "sysvinit"
 # Add sources and config directories
 FILESPATH:append = ":${TOPDIR}/../src"
 FILESPATH:append = ":${TOPDIR}/../config"
+
+# Enable UART on the Raspberry Pi 4
+ENABLE_UART := "1"
