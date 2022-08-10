@@ -73,7 +73,7 @@ void LogPrintV(ELogSeverityLevel severity, const char * format, va_list args) {
     size_t userPayloadLen = vsnprintf(userPayload, sizeof(userPayload), format, args);
     /* vsnprintf returns the number of bytes (characters) that could have been written
      * had the buffer been large enough. Take the possible truncation into account before
-     * poking around in in memory at e.g. userPayload[userPayloadLen]. */
+     * poking around in memory at e.g. userPayload[userPayloadLen]. */
     userPayloadLen = MIN(userPayloadLen, MAX_USER_PAYLOAD_LEN);
 
     /* Drop any newlines added by the caller */

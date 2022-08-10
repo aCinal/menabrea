@@ -166,7 +166,8 @@ static bool SigintListener(int signo, const siginfo_t * siginfo) {
 
     /* Use idempotent implementation to allow sending SIGINT from
      * the terminal during development to all foreground processes,
-     * i.e. to all dispatchers */
+     * i.e. to all dispatchers (or to allow systemd to send SIGINT
+     * to the entire control-group) */
     s_platformShmem->DispatcherExitFlag = 1;
     /* Signal handled gracefully */
     return true;

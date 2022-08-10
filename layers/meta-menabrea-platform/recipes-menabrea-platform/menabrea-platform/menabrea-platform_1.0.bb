@@ -2,7 +2,11 @@ SUMMARY = "Application platform recipe"
 DESCRIPTION = "Application platform"
 LICENSE = "MIT"
 
-SRC_URI = "file://platform"
+SRC_URI = " \
+    file://platform \
+    file://${PLATFORM_CONFIG_PATH} \
+    file://menabrea.service \
+    "
 
 S = "${WORKDIR}/platform"
 
@@ -12,18 +16,24 @@ DEPENDS = " \
     em-odp \
     "
 
+inherit cmake systemd
+
 PLATFORM_CONFIG_PATH:menabrea-node1 := "node1/platform_config.json"
 PLATFORM_CONFIG_PATH:menabrea-node2 := "node2/platform_config.json"
 PLATFORM_CONFIG_PATH:menabrea-node3 := "node3/platform_config.json"
 PLATFORM_CONFIG_PATH:menabrea-qemu := "qemu/platform_config.json"
-SRC_URI += "file://${PLATFORM_CONFIG_PATH}"
+
+FILES:${PN} += "/opt"
+FILES:${PN} += "${sysconfdir}"
+FILES:${PN} += "${systemd_unitdir}/system/menabrea.service"
+
+SYSTEMD_SERVICE:${PN} = "${@bb.utils.contains('MENABREA_AUTOSTART', '1', 'menabrea.service', '', d)}"
 
 do_install:append() {
 
     install -d ${D}/opt
-    install -m 755 ${WORKDIR}/${PLATFORM_CONFIG_PATH} ${D}/opt
+    install -m 0755 ${WORKDIR}/${PLATFORM_CONFIG_PATH} ${D}/opt
+
+    install -d ${D}${systemd_unitdir}/system
+    install -m 0644 ${WORKDIR}/menabrea.service ${D}/${systemd_unitdir}/system
 }
-
-FILES:${PN} += "/opt"
-
-inherit cmake

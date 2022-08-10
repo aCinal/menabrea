@@ -10,3 +10,6 @@ FILESPATH:append = ":${TOPDIR}/../config"
 
 # Enable UART on the Raspberry Pi 4
 ENABLE_UART := "1"
+
+# Let systemd start the platform at boot by default
+MENABREA_AUTOSTART ?= "1"
