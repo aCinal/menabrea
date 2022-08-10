@@ -1,6 +1,6 @@
 
 #include <menabrea/exception.h>
-#include "callstack.h"
+#include <exception/callstack.h>
 #include <menabrea/log.h>
 #include <stdarg.h>
 #include <signal.h>

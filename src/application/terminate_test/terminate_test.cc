@@ -2,6 +2,7 @@
 #include <menabrea/messaging.h>
 #include <menabrea/workers.h>
 #include <menabrea/log.h>
+#include <menabrea/cores.h>
 
 static int WorkerInit(void);
 static void WorkerLocalInit(int core);
@@ -12,7 +13,7 @@ extern "C" void ApplicationGlobalInit(void) {
     SWorkerConfig config = {
         .Name = "kamikaze",
         .WorkerId = WORKER_ID_INVALID,
-        .CoreMask = 0b1111,
+        .CoreMask = GetAllCoresMask(),
         .Parallel = false,
         .UserInit = WorkerInit,
         .WorkerBody = WorkerBody
@@ -46,7 +47,7 @@ static int WorkerInit(void) {
     SWorkerConfig config = {
         .Name = "kamikaze",
         .WorkerId = WORKER_ID_INVALID,
-        .CoreMask = 0b1111,
+        .CoreMask = GetAllCoresMask(),
         .Parallel = false,
         .UserLocalInit = WorkerLocalInit,
         .WorkerBody = WorkerBody

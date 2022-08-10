@@ -1,16 +1,15 @@
 #define _GNU_SOURCE
-#include "event_dispatcher.h"
-/* TODO: Resolve platform-internal dependencies more cleanly */
-#include "../exception/signal_handlers.h"
-#include "../work/work.h"
-#include "../timing/timing.h"
-#include "../log/log.h"
-#include "../log/runtime_logger.h"
-#include "../log/startup_logger.h"
-#include "../networking/networking.h"
+#include <startup/event_dispatcher.h>
+#include <cores/queue_groups.h>
+#include <exception/signal_handlers.h>
+#include <input/input.h>
+#include <log/log.h>
+#include <log/runtime_logger.h>
+#include <log/startup_logger.h>
+#include <timing/setup.h>
 #include <menabrea/exception.h>
 #include <menabrea/log.h>
-#include <event_machine/platform/env/environment.h>
+#include <menabrea/common.h>
 #include <string.h>
 #include <sched.h>
 #include <sys/sysinfo.h>
@@ -58,8 +57,8 @@ typedef struct SStartupSharedMemory {
     SAppLibsSet * AppLibs;
     /* Work subsystem configuration */
     SWorkConfig WorkConfig;
-    /* Network interface name */
-    char NetworkInterface[IFNAMSIZ];
+    /* Messaging subsystem configuration */
+    SMessagingConfig MessagingConfig;
     /* ODP barriers for EM-cores synchronization */
     odp_barrier_t OdpStartBarrier;
     odp_barrier_t OdpExitBarrier;
@@ -103,8 +102,7 @@ static SStartupSharedMemory * CreatePlatformSharedMemory(SEventDispatcherConfig 
     shmPtr->AppLibs = config->AppLibs;
     shmPtr->DispatcherExitFlag = 0;
     shmPtr->WorkConfig = config->WorkConfig;
-
-    (void) strcpy(shmPtr->NetworkInterface, config->NetworkInterface);
+    shmPtr->MessagingConfig = config->MessagingConfig;
 
     /* Initialize the sync primitives */
     odp_barrier_init(&shmPtr->OdpStartBarrier, config->Cores);
@@ -183,8 +181,9 @@ static void RunMainDispatcher(void) {
     /* Initialize EM core */
     AssertTrue(EM_OK == em_init_core());
 
+    SetUpQueueGroups();
     WorkInit(&s_platformShmem->WorkConfig);
-    NetworkingInit(s_platformShmem->NetworkInterface, s_platformShmem->WorkConfig.NodeId);
+    MessagingInit(&s_platformShmem->MessagingConfig);
     TimingInit();
 
     LogPrint(ELogSeverityLevel_Info, "Switching to runtime logging...");
@@ -213,8 +212,9 @@ static void RunMainDispatcher(void) {
 
     /* Close up shop */
     TimingTeardown();
-    NetworkingTeardown();
+    MessagingTeardown();
     WorkTeardown();
+    TearDownQueueGroups();
 
     /* Dispatch lingering events and exit */
     FinalizeExit();
@@ -245,11 +245,17 @@ static void DispatcherEntryPoint(void) {
      * almost at the same time */
     ActiveSync(&s_platformShmem->CompleteLocalAppInitsCounter);
 
-    LogPrint(ELogSeverityLevel_Debug, "Dispatcher %d entering the main dispatch loop...", \
+    LogPrint(ELogSeverityLevel_Debug, \
+        "Dispatcher %d enabling input polling and entering the main dispatch loop...", \
         core);
+    EnableInputPolling();
+
     RunDispatchLoops();
-    LogPrint(ELogSeverityLevel_Debug, "Dispatcher %d exited the main dispatch loop", \
+
+    LogPrint(ELogSeverityLevel_Debug, \
+        "Dispatcher %d exited the main dispatch loop. Disabling input polling...", \
         core);
+    DisableInputPolling();
 
     RunApplicationsLocalExits();
 

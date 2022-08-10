@@ -3,12 +3,13 @@
 #include <menabrea/workers.h>
 #include <menabrea/log.h>
 #include <menabrea/exception.h>
+#include <menabrea/cores.h>
 
 static void WorkerBody(TMessage message);
 
 extern "C" void ApplicationGlobalInit(void) {
 
-    TWorkerId workerId = DeploySimpleWorker("phoenix_worker", WORKER_ID_INVALID, 0b1111, WorkerBody);
+    TWorkerId workerId = DeploySimpleWorker("phoenix_worker", WORKER_ID_INVALID, GetAllCoresMask(), WorkerBody);
     if (workerId == WORKER_ID_INVALID) {
 
         LogPrint(ELogSeverityLevel_Error, "Failed to deploy the initial worker");
@@ -58,7 +59,7 @@ static void WorkerBody(TMessage message) {
         return;
     }
 
-    TWorkerId nextWorker = DeploySimpleWorker("phoenix_worker", WORKER_ID_INVALID, 0b1111, WorkerBody);
+    TWorkerId nextWorker = DeploySimpleWorker("phoenix_worker", WORKER_ID_INVALID, GetAllCoresMask(), WorkerBody);
     if (likely(nextWorker != WORKER_ID_INVALID)) {
 
         LogPrint(ELogSeverityLevel_Info, "Spawned new worker with ID 0x%x. Sending a trigger message...", nextWorker);

@@ -1,7 +1,8 @@
-#include "completion_daemon.h"
-#include "worker_table.h"
-#include "core_queue_groups.h"
-#include "messaging.h"
+#include <work/completion_daemon.h>
+#include <work/worker_table.h>
+#include <messaging/local/buffering.h>
+#include <cores/queue_groups.h>
+#include <menabrea/cores.h>
 #include <menabrea/workers.h>
 #include <menabrea/log.h>
 #include <menabrea/exception.h>
@@ -41,7 +42,7 @@ void DeployCompletionDaemon(void) {
         /* Give the completion daemon the highest priority - it will not handle
          * events often and should always be given priority. */
         EM_QUEUE_PRIO_HIGHEST,
-        MapCoreMaskToQueueGroup(GetSharedCoreMask() | GetIsolatedCoresMask()),
+        MapCoreMaskToQueueGroup(GetAllCoresMask()),
         NULL
     );
 

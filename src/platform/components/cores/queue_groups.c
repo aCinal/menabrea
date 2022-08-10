@@ -1,5 +1,5 @@
 
-#include "core_queue_groups.h"
+#include <cores/queue_groups.h>
 #include <menabrea/log.h>
 #include <menabrea/exception.h>
 #include <stdio.h>

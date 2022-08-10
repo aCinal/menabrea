@@ -1,5 +1,6 @@
 
-#include "event_machine_startup.h"
+#include <startup/event_machine_startup.h>
+#include <input/input.h>
 #include <menabrea/exception.h>
 #include <menabrea/log.h>
 #include <stdlib.h>
@@ -13,6 +14,7 @@ em_conf_t * InitializeEventMachine(SEmStartupConfig * config) {
     em_conf_t * emConf = malloc(sizeof(em_conf_t));
     AssertTrue(emConf != NULL);
 
+    em_conf_init(emConf);
     emConf->device_id = 0;
     /* Use process mode */
     emConf->thread_per_core = 0;
@@ -23,9 +25,13 @@ em_conf_t * InitializeEventMachine(SEmStartupConfig * config) {
     /* Enable event timer */
     emConf->event_timer = 1;
     emConf->default_pool_cfg = config->DefaultPoolConfig;
-
+    /* Override logger functions */
     emConf->log.log_fn = EmLogger;
     emConf->log.vlog_fn = EmVLogger;
+    /* Enable input polling on all cores */
+    emConf->input.input_poll_fn = EmInputPollFunction;
+    em_core_mask_zero(&emConf->input.input_poll_mask);
+    (void) em_core_mask_set_str(config->CoreMask, &emConf->input.input_poll_mask);
 
     AssertTrue(EM_OK == em_init(emConf));
 

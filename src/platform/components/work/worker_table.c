@@ -1,5 +1,5 @@
 
-#include "worker_table.h"
+#include <work/worker_table.h>
 #include <menabrea/workers.h>
 #include <menabrea/log.h>
 #include <menabrea/exception.h>

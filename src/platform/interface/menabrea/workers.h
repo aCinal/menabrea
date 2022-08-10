@@ -41,6 +41,7 @@ ODP_STATIC_ASSERT(WORKER_ID_INVALID > MAX_WORKER_COUNT, \
  * @return Node part of a worker ID
  */
 static inline TWorkerId WorkerIdGetNode(TWorkerId id) {
+
     return (id & WORKER_NODE_ID_MASK) >> WORKER_NODE_ID_SHIFT;
 }
 
@@ -50,6 +51,7 @@ static inline TWorkerId WorkerIdGetNode(TWorkerId id) {
  * @return Local part of a worker ID
  */
 static inline TWorkerId WorkerIdGetLocal(TWorkerId id) {
+
     return (id & WORKER_LOCAL_ID_MASK);
 }
 
@@ -60,6 +62,7 @@ static inline TWorkerId WorkerIdGetLocal(TWorkerId id) {
  * @return Fully qualified global worker ID
  */
 static inline TWorkerId MakeWorkerId(TWorkerId nodeId, TWorkerId localId) {
+
     return ( (nodeId << WORKER_NODE_ID_SHIFT) & WORKER_NODE_ID_MASK ) \
         | (localId & WORKER_LOCAL_ID_MASK);
 }
@@ -201,22 +204,6 @@ TWorkerId GetOwnWorkerId(void);
  *        and the worker can be scheduler again in parallel
  */
 void LeaveCriticalSection(void);
-
-/**
- * @brief Return a core mask corresponding to the shared core (suitable for non-critical applications)
- * @return Mask of the shared core
- * @note Platform operates on the assumption that one physical core is shared between EM-ODP
- *       and other Linux processes, while the rest are isolated (e.g. via kernel command-line)
- */
-int GetSharedCoreMask(void);
-
-/**
- * @brief Return a core mask corresponding to isolated cores only (suitable for high-performance low-latency applications)
- * @return Mask of isolated cores
- * @note Platform operates on the assumption that one physical core is shared between EM-ODP
- *       and other Linux processes, while the rest are isolated (e.g. via kernel command-line)
- */
-int GetIsolatedCoresMask(void);
 
 #ifdef __cplusplus
 }

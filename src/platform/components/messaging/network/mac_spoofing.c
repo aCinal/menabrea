@@ -1,4 +1,4 @@
-#include "eth_if_setup.h"
+#include <messaging/network/mac_spoofing.h>
 #include <menabrea/log.h>
 #include <menabrea/exception.h>
 #include <sys/socket.h>

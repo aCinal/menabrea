@@ -1,5 +1,5 @@
 
-#include "log.h"
+#include <log/log.h>
 #include <menabrea/log.h>
 #include <menabrea/common.h>
 #include <stdarg.h>

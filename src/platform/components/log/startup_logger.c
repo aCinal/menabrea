@@ -1,4 +1,4 @@
-#include "startup_logger.h"
+#include <log/startup_logger.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/prctl.h>

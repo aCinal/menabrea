@@ -3,13 +3,14 @@
 #include <menabrea/workers.h>
 #include <menabrea/log.h>
 #include <menabrea/exception.h>
+#include <menabrea/cores.h>
 
 static void ProducerBody(TMessage message);
 static void ConsumerBody(TMessage message);
 
 extern "C" void ApplicationGlobalInit(void) {
 
-    TWorkerId workerId = DeploySimpleWorker("producer", WORKER_ID_INVALID, 0b1111, ProducerBody);
+    TWorkerId workerId = DeploySimpleWorker("producer", WORKER_ID_INVALID, GetSharedCoreMask(), ProducerBody);
     if (workerId == WORKER_ID_INVALID) {
 
         LogPrint(ELogSeverityLevel_Error, "Failed to deploy the producer");
@@ -51,7 +52,7 @@ static void ProducerBody(TMessage message) {
     int messageCount = 32;
     /* Deploy a new worker on the same core - its local startup will have no way of completing on
      * this core and in the meantime we shall send 32 messages to it... */
-    TWorkerId workerId = DeploySimpleWorker("consumer", WORKER_ID_INVALID, 0b0001, ConsumerBody);
+    TWorkerId workerId = DeploySimpleWorker("consumer", WORKER_ID_INVALID, GetSharedCoreMask(), ConsumerBody);
 
     if (unlikely(workerId == WORKER_ID_INVALID)) {
 

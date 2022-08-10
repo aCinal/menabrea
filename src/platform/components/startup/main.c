@@ -1,12 +1,12 @@
 #define _GNU_SOURCE
-#include "command_line.h"
-#include "../log/log.h"
-#include "../log/startup_logger.h"
-#include "../exception/signal_handlers.h"
-#include "open_data_plane_startup.h"
-#include "event_machine_startup.h"
-#include "load_applications.h"
-#include "event_dispatcher.h"
+#include <startup/command_line.h>
+#include <startup/open_data_plane_startup.h>
+#include <startup/event_machine_startup.h>
+#include <startup/load_applications.h>
+#include <startup/event_dispatcher.h>
+#include <log/log.h>
+#include <log/startup_logger.h>
+#include <exception/signal_handlers.h>
 #include <menabrea/log.h>
 #include <menabrea/exception.h>
 #include <sched.h>
@@ -18,7 +18,7 @@
 
 static void InitializeLogger(void);
 static int ClaimCpus(void);
-static em_pool_cfg_t TranslateToEmPoolConfig(SPoolConfig * config);
+static em_pool_cfg_t TranslateToEmPoolConfig(SPoolConfig * config, em_event_type_t eventType);
 
 int main(int argc, char **argv) {
 
@@ -43,7 +43,7 @@ int main(int argc, char **argv) {
     /* Configure and initialize the OpenEM layer */
     SEmStartupConfig emStartupConfig = {
         .CoreMask = "0xF",
-        .DefaultPoolConfig = TranslateToEmPoolConfig(&startupParams->DefaultPoolConfig)
+        .DefaultPoolConfig = TranslateToEmPoolConfig(&startupParams->DefaultPoolConfig, EM_EVENT_TYPE_SW)
     };
     em_conf_t * emConf = InitializeEventMachine(&emStartupConfig);
     LogPrint(ELogSeverityLevel_Info, "OpenEM layer ready");
@@ -60,11 +60,16 @@ int main(int argc, char **argv) {
         .EmConf = emConf,
         .AppLibs = appLibs,
         .WorkConfig = {
-            .MessagingPoolConfig = TranslateToEmPoolConfig(&startupParams->MessagingPoolConfig),
-            .NodeId = startupParams->NodeId,
+            .NodeId = startupParams->NodeId
+        },
+        .MessagingConfig = {
+            .PoolConfig = TranslateToEmPoolConfig(&startupParams->MessagingPoolConfig, EM_EVENT_TYPE_SW),
+            .NetworkingConfig = {
+                .NodeId = startupParams->NodeId
+            }
         }
     };
-    (void) strcpy(dispatcherConfig.NetworkInterface, startupParams->NetworkInterface);
+    (void) strcpy(dispatcherConfig.MessagingConfig.NetworkingConfig.DeviceName, startupParams->NetworkInterface);
     /* Free startup params as not needed anymore */
     free(startupParams);
     RunEventDispatchers(&dispatcherConfig);
@@ -111,7 +116,7 @@ static int ClaimCpus(void) {
     return cores;
 }
 
-static em_pool_cfg_t TranslateToEmPoolConfig(SPoolConfig * config) {
+static em_pool_cfg_t TranslateToEmPoolConfig(SPoolConfig * config, em_event_type_t eventType) {
 
     /* A separate structure is used to store the EM pool config
      * as parsed from the command-line to ensure compiler warnings
@@ -121,7 +126,7 @@ static em_pool_cfg_t TranslateToEmPoolConfig(SPoolConfig * config) {
      * initialized. */
     em_pool_cfg_t emPoolConfig;
     em_pool_cfg_init(&emPoolConfig);
-    emPoolConfig.event_type = EM_EVENT_TYPE_SW;
+    emPoolConfig.event_type = eventType;
     emPoolConfig.align_offset.in_use = 1;
     emPoolConfig.align_offset.value = 0;
 

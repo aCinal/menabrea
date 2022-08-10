@@ -2,11 +2,11 @@
 #ifndef PLATFORM_COMPONENTS_STARTUP_EVENT_DISPATCHER_H
 #define PLATFORM_COMPONENTS_STARTUP_EVENT_DISPATCHER_H
 
-#include "load_applications.h"
+#include <startup/load_applications.h>
+#include <work/setup.h>
+#include <messaging/setup.h>
 #include <odp_api.h>
 #include <event_machine.h>
-#include "../work/work.h"
-#include <net/if.h>
 
 typedef struct SEventDispatcherConfig {
     int Cores;
@@ -14,7 +14,7 @@ typedef struct SEventDispatcherConfig {
     em_conf_t * EmConf;
     SAppLibsSet * AppLibs;
     SWorkConfig WorkConfig;
-    char NetworkInterface[IFNAMSIZ];
+    SMessagingConfig MessagingConfig;
 } SEventDispatcherConfig;
 
 void RunEventDispatchers(SEventDispatcherConfig * config);

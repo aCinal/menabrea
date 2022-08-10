@@ -1,4 +1,4 @@
-#include "timer_table.h"
+#include <timing/timer_table.h>
 #include <menabrea/log.h>
 #include <menabrea/exception.h>
 #include <menabrea/common.h>

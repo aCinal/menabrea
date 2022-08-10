@@ -1,6 +1,6 @@
 
-#ifndef PLATFORM_COMPONENTS_WORK_CORE_QUEUE_GROUPS_H
-#define PLATFORM_COMPONENTS_WORK_CORE_QUEUE_GROUPS_H
+#ifndef PLATFORM_COMPONENTS_CORES_QUEUE_GROUPS_H
+#define PLATFORM_COMPONENTS_CORES_QUEUE_GROUPS_H
 
 #include <event_machine.h>
 
@@ -20,4 +20,4 @@ em_queue_group_t MapCoreMaskToQueueGroup(int coreMask);
  */
 void TearDownQueueGroups(void);
 
-#endif /* PLATFORM_COMPONENTS_WORK_CORE_QUEUE_GROUPS_H */
+#endif /* PLATFORM_COMPONENTS_CORES_QUEUE_GROUPS_H */

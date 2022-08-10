@@ -4,6 +4,7 @@
 #include <menabrea/log.h>
 #include <menabrea/timing.h>
 #include <menabrea/exception.h>
+#include <menabrea/cores.h>
 #include <stdlib.h>
 #include <time.h>
 #include <map>

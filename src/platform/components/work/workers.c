@@ -1,10 +1,8 @@
 
 #include <menabrea/workers.h>
-#include "work.h"
-#include "core_queue_groups.h"
-#include "worker_table.h"
-#include "messaging.h"
-#include "completion_daemon.h"
+#include <work/worker_table.h>
+#include <work/completion_daemon.h>
+#include <cores/queue_groups.h>
 #include <menabrea/exception.h>
 #include <menabrea/log.h>
 #include <menabrea/common.h>
@@ -16,22 +14,6 @@ static em_status_t WorkerEoLocalStart(void * eoCtx, em_eo_t eo);
 static em_status_t WorkerEoStop(void * eoCtx, em_eo_t eo);
 static em_status_t WorkerEoLocalStop(void * eoCtx, em_eo_t eo);
 static void WorkerEoReceive(void * eoCtx, em_event_t event, em_event_type_t type, em_queue_t queue, void * qCtx);
-
-void WorkInit(SWorkConfig * config) {
-
-    SetUpQueueGroups();
-    WorkerTableInit(config->NodeId);
-    MessagingInit(&config->MessagingPoolConfig);
-    DeployCompletionDaemon();
-}
-
-void WorkTeardown(void) {
-
-    CompletionDaemonTeardown();
-    WorkerTableTeardown();
-    MessagingTeardown();
-    TearDownQueueGroups();
-}
 
 TWorkerId DeployWorker(const SWorkerConfig * config) {
 
@@ -263,25 +245,6 @@ void LeaveCriticalSection(void) {
         /* Leave atomic processing context */
         em_atomic_processing_end();
     }
-}
-
-int GetSharedCoreMask(void) {
-
-    /* Core 0 is always shared */
-    return 0b1;
-}
-
-int GetIsolatedCoresMask(void) {
-
-    int cores = em_core_count();
-    /* Start with all bits set and shift them left by the number
-     * of cores in the system. This will result in 'cores' rightmost
-     * bits being zero. */
-    int invertedMask = (-1) << cores;
-    /* Add the LSB to the inverted mask */
-    invertedMask |= 0b1;
-    /* Invert the mask to be left only with the isolated cores */
-    return ~invertedMask;
 }
 
 void TerminateAllWorkers(void) {

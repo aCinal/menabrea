@@ -1,8 +1,6 @@
-#include "timing.h"
-#include "timer_table.h"
-#include "timing_daemon.h"
-#include "timer_instance.h"
-#include "../work/worker_table.h"
+#include <timing/timer_table.h>
+#include <timing/timing_daemon.h>
+#include <timing/timer_instance.h>
 #include <menabrea/timing.h>
 #include <menabrea/workers.h>
 #include <menabrea/messaging.h>
@@ -11,29 +9,7 @@
 #include <event_machine/add-ons/event_machine_timer.h>
 #include <event_machine.h>
 
-static inline void DestroyAllTimers(void);
 static inline void ChangeStateFromArmedToIdle(STimerContext * context);
-
-void TimingInit(void) {
-
-    /* Start the daemon EO that will service timeout events */
-    DeployTimingDaemon();
-
-    /* Create the EM timer instance */
-    CreateTimerInstance();
-
-    /* Initialize the timer table for application's use */
-    TimerTableInit();
-}
-
-void TimingTeardown(void) {
-
-    DestroyAllTimers();
-
-    TimerTableTeardown();
-    DeleteTimerInstance();
-    TimingDaemonTeardown();
-}
 
 TTimerId CreateTimer(const char * name) {
 
@@ -266,38 +242,6 @@ void DestroyTimer(TTimerId timerId) {
         UnlockTimerTableEntry(timerId);
         LogPrint(ELogSeverityLevel_Debug, "%s(): Cleanly destroyed timer '%s' (0x%x)", \
             __FUNCTION__, timerName, timerId);
-    }
-}
-
-void CancelAllTimers(void) {
-
-    LogPrint(ELogSeverityLevel_Debug, "Cancelling any remaining timers...");
-
-    for (TTimerId i = 0; i < MAX_TIMER_COUNT; i++) {
-
-        /* Do not do any locking (simulate application perspective) - a timer may
-         * change state from ETimerState_Armed to ETimerState_Idle in the meantime
-         * - the implementation should handle this gracefully. */
-        STimerContext * context = FetchTimerContext(i);
-        if (context->State == ETimerState_Armed) {
-
-            DisarmTimer(i);
-        }
-    }
-}
-
-static inline void DestroyAllTimers(void) {
-
-    for (TTimerId i = 0; i < MAX_TIMER_COUNT; i++) {
-
-        STimerContext * context = FetchTimerContext(i);
-        /* Only idle and inactive timers can exist at this point */
-        AssertTrue(context->State != ETimerState_Armed);
-        AssertTrue(context->State != ETimerState_Destroyed);
-        if (context->State == ETimerState_Idle) {
-
-            DestroyTimer(i);
-        }
     }
 }
 

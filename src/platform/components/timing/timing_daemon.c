@@ -1,8 +1,8 @@
-#include "timing_daemon.h"
-#include "timer_table.h"
-#include "timer_instance.h"
-#include "../work/worker_table.h"
-#include "../work/core_queue_groups.h"
+#include <timing/timing_daemon.h>
+#include <timing/timer_table.h>
+#include <timing/timer_instance.h>
+#include <cores/queue_groups.h>
+#include <menabrea/cores.h>
 #include <menabrea/timing.h>
 #include <menabrea/log.h>
 #include <menabrea/exception.h>
