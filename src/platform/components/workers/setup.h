@@ -5,12 +5,12 @@
 #include <menabrea/workers.h>
 #include <event_machine.h>
 
-typedef struct SWorkConfig {
+typedef struct SWorkersConfig {
     TWorkerId NodeId;
-} SWorkConfig;
+} SWorkersConfig;
 
-void WorkInit(SWorkConfig * config);
+void WorkersInit(SWorkersConfig * config);
 void TerminateAllWorkers(void);
-void WorkTeardown(void);
+void WorkersTeardown(void);
 
 #endif /* PLATFORM_COMPONENTS_WORKERS_SETUP_H */

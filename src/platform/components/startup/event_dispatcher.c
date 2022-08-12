@@ -19,27 +19,36 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#define SYNC_DISPATCH_ROUNDS          16 * 1024
-#define EXIT_CHECK_DISPATCH_ROUNDS    4 * 1024
-#define DRAIN_DISPATCH_ROUNDS         64
+#define SYNC_DISPATCH_ROUNDS        16 * 1024
+#define EXIT_CHECK_DISPATCH_ROUNDS  4 * 1024
+#define DRAIN_DISPATCH_ROUNDS       64
 
-static struct SStartupSharedMemory * CreatePlatformSharedMemory(SEventDispatcherConfig * config);
+static inline struct SStartupSharedMemory * CreatePlatformSharedMemory(SEventDispatcherConfig * config);
+static inline void ActiveSync(env_atomic64_t * counter);
+
 static bool SigchldListener(int signo, const siginfo_t * siginfo);
 static bool SigintListener(int signo, const siginfo_t * siginfo);
-static void RunMainDispatcher(void);
-static void DispatcherEntryPoint(void);
-static void RunApplicationsGlobalInits(void);
-static struct SChildren * ForkChildDispatchers(void);
-static void ChildDispatcherInit(int physicalCore);
-static void ChildDispatcherTeardown(void);
-static void RunApplicationsLocalInits(void);
-static void RunDispatchLoops(void);
-static void ActiveSync(env_atomic64_t * counter);
-static void DrainEvents(void);
-static void FinalizeExit(void);
-static void RunApplicationsLocalExits(void);
-static void RunApplicationsGlobalExits(void);
-static void WaitForChildDispatchers(struct SChildren * children);
+
+static inline void RunMainDispatcher(void);
+static inline void SetDispatcherProcessName(int physicalCore);
+
+static inline void RunPlatformGlobalInit(void);
+static inline void RunPlatformGlobalTeardown(void);
+
+static inline void DispatcherEntryPoint(void);
+static inline struct SChildren * ForkChildDispatchers(void);
+static inline void ChildDispatcherInit(int physicalCore);
+static inline void ChildDispatcherTeardown(void);
+static inline void RunDispatchLoops(void);
+
+static inline void DrainEvents(void);
+static inline void FinalizeExit(void);
+static inline void WaitForChildDispatchers(struct SChildren * children);
+
+static inline void RunApplicationsGlobalInits(void);
+static inline void RunApplicationsLocalInits(void);
+static inline void RunApplicationsLocalExits(void);
+static inline void RunApplicationsGlobalExits(void);
 
 typedef struct SChildren {
     int Count;
@@ -56,7 +65,7 @@ typedef struct SStartupSharedMemory {
     /* Loaded application libraries */
     SAppLibsSet * AppLibs;
     /* Work subsystem configuration */
-    SWorkConfig WorkConfig;
+    SWorkersConfig WorkersConfig;
     /* Messaging subsystem configuration */
     SMessagingConfig MessagingConfig;
     /* ODP barriers for EM-cores synchronization */
@@ -79,7 +88,6 @@ void RunEventDispatchers(SEventDispatcherConfig * config) {
 
     /* Set up shared memory */
     s_platformShmem = CreatePlatformSharedMemory(config);
-    LogPrint(ELogSeverityLevel_Info, "Platform memory mapped at %p", s_platformShmem);
 
     /* Install signal listeners */
     AssertTrue(0 == ListenForSignal(SIGCHLD, SigchldListener));
@@ -90,7 +98,7 @@ void RunEventDispatchers(SEventDispatcherConfig * config) {
     env_shared_free(s_platformShmem);
 }
 
-static SStartupSharedMemory * CreatePlatformSharedMemory(SEventDispatcherConfig * config) {
+static inline SStartupSharedMemory * CreatePlatformSharedMemory(SEventDispatcherConfig * config) {
 
     SStartupSharedMemory * shmPtr = \
         (SStartupSharedMemory *) env_shared_malloc(sizeof(SStartupSharedMemory));
@@ -101,7 +109,7 @@ static SStartupSharedMemory * CreatePlatformSharedMemory(SEventDispatcherConfig 
     shmPtr->EmConf = config->EmConf;
     shmPtr->AppLibs = config->AppLibs;
     shmPtr->DispatcherExitFlag = 0;
-    shmPtr->WorkConfig = config->WorkConfig;
+    shmPtr->WorkersConfig = config->WorkersConfig;
     shmPtr->MessagingConfig = config->MessagingConfig;
 
     /* Initialize the sync primitives */
@@ -115,6 +123,17 @@ static SStartupSharedMemory * CreatePlatformSharedMemory(SEventDispatcherConfig 
     env_atomic64_init(&shmPtr->FinalSyncCounter);
 
     return shmPtr;
+}
+
+static inline void ActiveSync(env_atomic64_t * counter) {
+
+    /* Synchronize all cores actively, i.e. keep all of them dispatching
+     * while they wait */
+    int cores = em_core_count();
+    env_atomic64_inc(counter);
+    do {
+        em_dispatch(SYNC_DISPATCH_ROUNDS);
+    } while (env_atomic64_get(counter) < cores);
 }
 
 static bool SigchldListener(int signo, const siginfo_t * siginfo) {
@@ -173,53 +192,31 @@ static bool SigintListener(int signo, const siginfo_t * siginfo) {
     return true;
 }
 
-static void RunMainDispatcher(void) {
+static inline void RunMainDispatcher(void) {
 
-    const char * procName = "disp_0";
-    LogPrint(ELogSeverityLevel_Info, "Changing process name to %s...", procName);
-    AssertTrue(0 == prctl(PR_SET_NAME, procName, 0, 0, 0));
+    /* Set process name */
+    SetDispatcherProcessName(0);
+    /* Switch to runtime logging */
+    SetLoggerCallback(RuntimeLoggerCallback);
 
     /* Initialize EM core */
     AssertTrue(EM_OK == em_init_core());
 
-    SetUpQueueGroups();
-    WorkInit(&s_platformShmem->WorkConfig);
-    MessagingInit(&s_platformShmem->MessagingConfig);
-    TimingInit();
-
-    LogPrint(ELogSeverityLevel_Info, "Switching to runtime logging...");
-    SetLoggerCallback(RuntimeLoggerCallback);
-
+    /* Initialize the platform components */
+    RunPlatformGlobalInit();
+    /* Give the applications a chance to initialize before the fork */
     RunApplicationsGlobalInits();
     SChildren * children = ForkChildDispatchers();
-
     /* Common code shared by all dispatchers */
     DispatcherEntryPoint();
-
     /* Run global exits while other cores are still dispatching */
     RunApplicationsGlobalExits();
-
     /* Release the child dispatchers to complete application global exit */
     ActiveSync(&s_platformShmem->WaitForGlobalAppExitCounter);
     /* Wait for global exit to complete on all cores */
     ActiveSync(&s_platformShmem->CompleteGlobalAppExitCounter);
-
-    /* Cancel any timers left running by the application */
-    CancelAllTimers();
-    /* Tear down any workers left behind by the application */
-    TerminateAllWorkers();
-
-    ActiveSync(&s_platformShmem->WaitForWorkersTeardownCounter);
-
-    /* Close up shop */
-    TimingTeardown();
-    MessagingTeardown();
-    WorkTeardown();
-    TearDownQueueGroups();
-
-    /* Dispatch lingering events and exit */
-    FinalizeExit();
-
+    /* Tear down platform components while other cores are still dispatching */
+    RunPlatformGlobalTeardown();
     /* Reap child processes */
     WaitForChildDispatchers(children);
 
@@ -227,10 +224,48 @@ static void RunMainDispatcher(void) {
     SetLoggerCallback(StartupLoggerCallback);
 }
 
-static void DispatcherEntryPoint(void) {
+static inline void SetDispatcherProcessName(int physicalCore) {
+
+    char procName[16];
+    (void) snprintf(procName, sizeof(procName), "disp_%d", physicalCore);
+    AssertTrue(0 == prctl(PR_SET_NAME, procName, 0, 0, 0));
+}
+
+static inline void RunPlatformGlobalInit(void) {
+
+    /* Set up queue groups used by platform EOs and application 'workers' */
+    SetUpQueueGroups();
+    /* Initialize the workers component (application abstraction on top of EOs) */
+    WorkersInit(&s_platformShmem->WorkersConfig);
+    /* Initialize the internal communications component */
+    MessagingInit(&s_platformShmem->MessagingConfig);
+    /* Initialize the timers component */
+    TimingInit();
+}
+
+static inline void RunPlatformGlobalTeardown(void) {
+
+    /* Cancel any timers left running by the application */
+    CancelAllTimers();
+    /* Tear down any workers left behind by the application */
+    TerminateAllWorkers();
+    /* Keep the other cores dispatching while terminating workers
+     * to allow local exits to complete on all of them */
+    ActiveSync(&s_platformShmem->WaitForWorkersTeardownCounter);
+
+    /* Close up shop */
+    TimingTeardown();
+    MessagingTeardown();
+    WorkersTeardown();
+    TearDownQueueGroups();
+
+    /* Dispatch lingering events and exit */
+    FinalizeExit();
+}
+
+static inline void DispatcherEntryPoint(void) {
 
     int core = em_core_id();
-
     LogPrint(ELogSeverityLevel_Debug, "EM core %d initialized", core);
 
     /* Wait for other dispatchers to initialize */
@@ -238,7 +273,6 @@ static void DispatcherEntryPoint(void) {
 
     /* Do local initializaton of application libraries */
     RunApplicationsLocalInits();
-
     LogPrint(ELogSeverityLevel_Debug, "Local inits complete on core %d", core);
 
     /* Keep all cores dispatching until local init has returned in order to
@@ -246,20 +280,19 @@ static void DispatcherEntryPoint(void) {
      * almost at the same time */
     ActiveSync(&s_platformShmem->CompleteLocalAppInitsCounter);
 
-    LogPrint(ELogSeverityLevel_Debug, \
+    LogPrint(ELogSeverityLevel_Info, \
         "Dispatcher %d enabling input polling and entering the main dispatch loop...", \
         core);
     EnableInputPolling();
 
     RunDispatchLoops();
 
-    LogPrint(ELogSeverityLevel_Debug, \
+    LogPrint(ELogSeverityLevel_Info, \
         "Dispatcher %d exited the main dispatch loop. Disabling input polling...", \
         core);
     DisableInputPolling();
 
     RunApplicationsLocalExits();
-
     LogPrint(ELogSeverityLevel_Debug, "Local exit complete on core %d", core);
 
     /* Continue dispatching until all cores have exited the dispatch
@@ -269,18 +302,7 @@ static void DispatcherEntryPoint(void) {
     ActiveSync(&s_platformShmem->CompleteLocalAppExitsCounter);
 }
 
-static void RunApplicationsGlobalInits(void) {
-
-    for (int i = 0; i < s_platformShmem->AppLibs->Count; i++) {
-
-        SAppLib * appLib = &s_platformShmem->AppLibs->Libs[i];
-        LogPrint(ELogSeverityLevel_Info, "Running global init of %s...", \
-            appLib->Name);
-        appLib->GlobalInit();
-    }
-}
-
-static SChildren * ForkChildDispatchers(void) {
+static inline SChildren * ForkChildDispatchers(void) {
 
     int cores = em_core_count();
     LogPrint(ELogSeverityLevel_Info, "Spawning %d child dispatchers...", \
@@ -316,9 +338,8 @@ static SChildren * ForkChildDispatchers(void) {
     return handles;
 }
 
-static void ChildDispatcherInit(int physicalCore) {
+static inline void ChildDispatcherInit(int physicalCore) {
 
-    char procName[16];
     /* Request SIGTERM if parent dies */
     AssertTrue(0 == prctl(PR_SET_PDEATHSIG, SIGTERM));
 
@@ -330,8 +351,7 @@ static void ChildDispatcherInit(int physicalCore) {
     }
 
     /* Set process name */
-    (void) snprintf(procName, sizeof(procName), "disp_%1d", physicalCore);
-    AssertTrue(0 == prctl(PR_SET_NAME, procName, 0, 0, 0));
+    SetDispatcherProcessName(physicalCore);
 
     /* Migrate to own core */
     cpu_set_t cpuMask;
@@ -347,7 +367,7 @@ static void ChildDispatcherInit(int physicalCore) {
     AssertTrue(EM_OK == em_init_core());
 }
 
-static void ChildDispatcherTeardown(void) {
+static inline void ChildDispatcherTeardown(void) {
 
     /* Wait for application global exit to finish */
     ActiveSync(&s_platformShmem->WaitForGlobalAppExitCounter);
@@ -367,19 +387,7 @@ static void ChildDispatcherTeardown(void) {
     exit(EXIT_SUCCESS);
 }
 
-static void RunApplicationsLocalInits(void) {
-
-    int core = em_core_id();
-    for (int i = 0; i < s_platformShmem->AppLibs->Count; i++) {
-
-        SAppLib * appLib = &s_platformShmem->AppLibs->Libs[i];
-        LogPrint(ELogSeverityLevel_Info, "Running local init of %s on core %d...", \
-            appLib->Name, core);
-        appLib->LocalInit(core);
-    }
-}
-
-static void RunDispatchLoops(void) {
+static inline void RunDispatchLoops(void) {
 
     while (!s_platformShmem->DispatcherExitFlag) {
 
@@ -394,70 +402,31 @@ static void RunDispatchLoops(void) {
     em_dispatch(EXIT_CHECK_DISPATCH_ROUNDS);
 }
 
-static void ActiveSync(env_atomic64_t * counter) {
-
-    /* Synchronize all cores actively, i.e. keep all of them dispatching
-     * while they wait */
-    int cores = em_core_count();
-    env_atomic64_inc(counter);
-    do {
-        em_dispatch(SYNC_DISPATCH_ROUNDS);
-    } while (env_atomic64_get(counter) < cores);
-}
-
-static void DrainEvents(void) {
+static inline void DrainEvents(void) {
 
     /* Drain all lingering events */
     while (em_dispatch(DRAIN_DISPATCH_ROUNDS) > 0) {
         ;
     }
+
+    LogPrint(ELogSeverityLevel_Info, "Core %d done dispatching for good...", em_core_id());
 }
 
-static void FinalizeExit(void) {
-
-    int core = em_core_id();
+static inline void FinalizeExit(void) {
 
     /* Do one final synchronization */
     ActiveSync(&s_platformShmem->FinalSyncCounter);
-
     /* Drain any lingering events */
     DrainEvents();
-
-    LogPrint(ELogSeverityLevel_Debug, "Core %d done dispatching for good...", core);
-
     /* Wait for other dispatchers to leave their dispatch loops */
     odp_barrier_wait(&s_platformShmem->OdpExitBarrier);
-
+    /* Tear down EM on this core */
     AssertTrue(EM_OK == em_term_core());
-
     /* Note that ODP barriers are immediately reusable */
     odp_barrier_wait(&s_platformShmem->OdpExitBarrier);
 }
 
-static void RunApplicationsLocalExits(void) {
-
-    int core = em_core_id();
-    for (int i = 0; i < s_platformShmem->AppLibs->Count; i++) {
-
-        SAppLib * appLib = &s_platformShmem->AppLibs->Libs[i];
-        LogPrint(ELogSeverityLevel_Info, "Running local exit of %s on core %d...", \
-            appLib->Name, core);
-        appLib->LocalExit(core);
-    }
-}
-
-static void RunApplicationsGlobalExits(void) {
-
-    for (int i = 0; i < s_platformShmem->AppLibs->Count; i++) {
-
-        SAppLib * appLib = &s_platformShmem->AppLibs->Libs[i];
-        LogPrint(ELogSeverityLevel_Info, "Running global exit of %s...", \
-            appLib->Name);
-        appLib->GlobalExit();
-    }
-}
-
-static void WaitForChildDispatchers(SChildren * children) {
+static inline void WaitForChildDispatchers(SChildren * children) {
 
     pid_t ret;
     int status;
@@ -494,4 +463,50 @@ static void WaitForChildDispatchers(SChildren * children) {
 
     /* Consume the handle in this function */
     free(children);
+}
+
+static inline void RunApplicationsGlobalInits(void) {
+
+    for (int i = 0; i < s_platformShmem->AppLibs->Count; i++) {
+
+        SAppLib * appLib = &s_platformShmem->AppLibs->Libs[i];
+        LogPrint(ELogSeverityLevel_Info, "Running global init of %s...", \
+            appLib->Name);
+        appLib->GlobalInit();
+    }
+}
+
+static inline void RunApplicationsLocalInits(void) {
+
+    int core = em_core_id();
+    for (int i = 0; i < s_platformShmem->AppLibs->Count; i++) {
+
+        SAppLib * appLib = &s_platformShmem->AppLibs->Libs[i];
+        LogPrint(ELogSeverityLevel_Info, "Running local init of %s on core %d...", \
+            appLib->Name, core);
+        appLib->LocalInit(core);
+    }
+}
+
+static inline void RunApplicationsLocalExits(void) {
+
+    int core = em_core_id();
+    for (int i = 0; i < s_platformShmem->AppLibs->Count; i++) {
+
+        SAppLib * appLib = &s_platformShmem->AppLibs->Libs[i];
+        LogPrint(ELogSeverityLevel_Info, "Running local exit of %s on core %d...", \
+            appLib->Name, core);
+        appLib->LocalExit(core);
+    }
+}
+
+static inline void RunApplicationsGlobalExits(void) {
+
+    for (int i = 0; i < s_platformShmem->AppLibs->Count; i++) {
+
+        SAppLib * appLib = &s_platformShmem->AppLibs->Libs[i];
+        LogPrint(ELogSeverityLevel_Info, "Running global exit of %s...", \
+            appLib->Name);
+        appLib->GlobalExit();
+    }
 }

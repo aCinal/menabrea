@@ -11,6 +11,7 @@ static inline ELogSeverityLevel MapSeverityLevel(em_log_level_t level);
 
 em_conf_t * InitializeEventMachine(SEmStartupConfig * config) {
 
+    LogPrint(ELogSeverityLevel_Info, "Initializing the OpenEM layer...");
     em_conf_t * emConf = malloc(sizeof(em_conf_t));
     AssertTrue(emConf != NULL);
 
@@ -34,8 +35,17 @@ em_conf_t * InitializeEventMachine(SEmStartupConfig * config) {
     (void) em_core_mask_set_str(config->CoreMask, &emConf->input.input_poll_mask);
 
     AssertTrue(EM_OK == em_init(emConf));
+    LogPrint(ELogSeverityLevel_Info, "OpenEM layer ready");
 
     return emConf;
+}
+
+void TearDownEventMachine(em_conf_t * emConf) {
+
+    AssertTrue(EM_OK == em_term(emConf));
+    /* Consume the EM conf handle previously allocated in the init function */
+    free(emConf);
+    LogPrint(ELogSeverityLevel_Info, "OpenEM layer teardown complete");
 }
 
 static int EmLogger(em_log_level_t level, const char * format, ...) {

@@ -5,4 +5,4 @@ set(SOURCES
     workers.c
 )
 
-add_library(work OBJECT ${SOURCES})
+add_library(workers OBJECT ${SOURCES})

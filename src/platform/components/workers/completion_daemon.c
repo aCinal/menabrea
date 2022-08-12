@@ -1,5 +1,5 @@
-#include <work/completion_daemon.h>
-#include <work/worker_table.h>
+#include <workers/completion_daemon.h>
+#include <workers/worker_table.h>
 #include <messaging/local/buffering.h>
 #include <cores/queue_groups.h>
 #include <menabrea/cores.h>
@@ -17,11 +17,13 @@ static em_queue_t s_daemonQueue = EM_QUEUE_UNDEF;
 
 void DeployCompletionDaemon(void) {
 
+    const char * daemonName = "completion_daemon";
+
     /* Create the EO - note that the daemon cannot have any local initialization
      * as we require its startup to be completely synchronous, so that it can
      * immediately service requests as other workers/EOs are starting up. */
     em_eo_t eo = em_eo_create(
-        "platform_daemon",
+        daemonName,
         DaemonEoStart,
         NULL,
         DaemonEoStop,
@@ -37,7 +39,7 @@ void DeployCompletionDaemon(void) {
 
     /* Create the queue */
     em_queue_t queue = em_queue_create(
-        "platform_daemon",
+        daemonName,
         EM_QUEUE_TYPE_PARALLEL,
         /* Give the completion daemon the highest priority - it will not handle
          * events often and should always be given priority. */

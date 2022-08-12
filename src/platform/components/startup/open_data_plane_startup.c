@@ -8,14 +8,11 @@ static inline ELogSeverityLevel MapSeverityLevel(odp_log_level_t level);
 
 odp_instance_t InitializeOpenDataPlane(SOdpStartupConfig * config) {
 
-    odp_instance_t instance;
-    odp_init_t initParams;
-
-    int numberOfCpus = config->Cores;
+    LogPrint(ELogSeverityLevel_Info, "Initializing the ODP layer...");
 
     odp_cpumask_t workerMask;
     odp_cpumask_zero(&workerMask);
-    for (int i = 1; i < numberOfCpus; i++) {
+    for (int i = 1; i < config->Cores; i++) {
 
         odp_cpumask_set(&workerMask, i);
     }
@@ -24,6 +21,7 @@ odp_instance_t InitializeOpenDataPlane(SOdpStartupConfig * config) {
     odp_cpumask_zero(&control_mask);
     odp_cpumask_set(&control_mask, 0);
 
+    odp_init_t initParams;
     /* Set default param values */
     odp_init_param_init(&initParams);
 
@@ -39,12 +37,12 @@ odp_instance_t InitializeOpenDataPlane(SOdpStartupConfig * config) {
     /* Set the memory model */
     initParams.mem_model = ODP_MEM_MODEL_PROCESS;
 
+    odp_instance_t instance;
     AssertTrue(0 == odp_init_global(&instance, &initParams, NULL));
     AssertTrue(0 == odp_init_local(instance, ODP_THREAD_CONTROL));
 
     /* Configure the scheduler */
     odp_schedule_config_t schedulerConfig;
-
     odp_schedule_config_init(&schedulerConfig);
     /* EM does not need the ODP predefined scheduling groups */
     schedulerConfig.sched_group.all = 0;
@@ -55,7 +53,15 @@ odp_instance_t InitializeOpenDataPlane(SOdpStartupConfig * config) {
     /* Print ODP system info */
     odp_sys_info_print();
 
+    LogPrint(ELogSeverityLevel_Info, "ODP layer ready");
     return instance;
+}
+
+void TearDownOpenDataPlane(odp_instance_t odpInstance) {
+
+    AssertTrue(0 == odp_term_local());
+    LogPrint(ELogSeverityLevel_Info, "Tearing down ODP globally...");
+    AssertTrue(0 == odp_term_global(odpInstance));
 }
 
 static int OdpLogger(odp_log_level_t level, const char * format, ...) {

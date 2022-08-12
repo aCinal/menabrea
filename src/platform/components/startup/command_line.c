@@ -1,4 +1,4 @@
-#include "command_line.h"
+#include <startup/command_line.h>
 #include <menabrea/log.h>
 #include <menabrea/exception.h>
 #include <stdlib.h>
@@ -83,6 +83,11 @@ SStartupParams * ParseCommandLine(int argc, char **argv) {
     AssertTrue(params->NodeId != WORKER_ID_INVALID);
 
     return params;
+}
+
+void ReleaseStartupParams(SStartupParams * params) {
+
+    free(params);
 }
 
 static void SetDefaults(SStartupParams * params) {

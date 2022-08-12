@@ -10,5 +10,6 @@ typedef struct SEmStartupConfig {
 } SEmStartupConfig;
 
 em_conf_t * InitializeEventMachine(SEmStartupConfig * config);
+void TearDownEventMachine(em_conf_t * emConf);
 
 #endif /* PLATFORM_COMPONENTS_STARTUP_EVENT_MACHINE_STARTUP_H */

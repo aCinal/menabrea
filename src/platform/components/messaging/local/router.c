@@ -2,7 +2,7 @@
 #include <messaging/local/buffering.h>
 #include <messaging/message.h>
 #include <menabrea/log.h>
-#include <work/worker_table.h>
+#include <workers/worker_table.h>
 
 int RouteIntranodeMessage(TMessage message) {
 

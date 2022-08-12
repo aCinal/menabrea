@@ -1,6 +1,6 @@
 
-#ifndef PLATFORM_COMPONENTS_WORK_WORKER_TABLE_H
-#define PLATFORM_COMPONENTS_WORK_WORKER_TABLE_H
+#ifndef PLATFORM_COMPONENTS_WORKERS_WORKER_TABLE_H
+#define PLATFORM_COMPONENTS_WORKERS_WORKER_TABLE_H
 
 #include <menabrea/common.h>
 #include <menabrea/workers.h>
@@ -45,4 +45,4 @@ void MarkTeardownInProgress(TWorkerId workerId);
 void LockWorkerTableEntry(TWorkerId workerId);
 void UnlockWorkerTableEntry(TWorkerId workerId);
 
-#endif /* PLATFORM_COMPONENTS_WORK_WORKER_TABLE_H */
+#endif /* PLATFORM_COMPONENTS_WORKERS_WORKER_TABLE_H */

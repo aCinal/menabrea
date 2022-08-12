@@ -30,5 +30,6 @@ typedef struct SStartupParams {
 } SStartupParams;
 
 SStartupParams * ParseCommandLine(int argc, char **argv);
+void ReleaseStartupParams(SStartupParams * params);
 
 #endif /* PLATFORM_COMPONENTS_STARTUP_COMMAND_LINE_H */

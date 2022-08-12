@@ -1,6 +1,6 @@
 #include <messaging/local/buffering.h>
 #include <messaging/message.h>
-#include <work/worker_table.h>
+#include <workers/worker_table.h>
 #include <menabrea/exception.h>
 
 int BufferMessage(TMessage message) {

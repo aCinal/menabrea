@@ -31,35 +31,30 @@ int main(int argc, char **argv) {
     /* Allow running on all cores */
     int numOfCpus = ClaimCpus();
 
-    LogPrint(ELogSeverityLevel_Info, "Initializing ODP layer...");
     /* Configure and initialize the ODP layer */
     SOdpStartupConfig odpStartupConfig = {
         .Cores = numOfCpus
     };
     odp_instance_t odpInstance = InitializeOpenDataPlane(&odpStartupConfig);
-    LogPrint(ELogSeverityLevel_Info, "ODP layer ready");
 
-    LogPrint(ELogSeverityLevel_Info, "Initializing the OpenEM layer...");
     /* Configure and initialize the OpenEM layer */
     SEmStartupConfig emStartupConfig = {
         .CoreMask = "0xF",
         .DefaultPoolConfig = TranslateToEmPoolConfig(&startupParams->DefaultPoolConfig, EM_EVENT_TYPE_SW)
     };
     em_conf_t * emConf = InitializeEventMachine(&emStartupConfig);
-    LogPrint(ELogSeverityLevel_Info, "OpenEM layer ready");
 
-    LogPrint(ELogSeverityLevel_Info, "Loading application libraries...");
     /* Load applications before the fork to ensure identical layout of
      * address spaces in all children */
     SAppLibsSet * appLibs = LoadApplicationLibraries();
 
-    LogPrint(ELogSeverityLevel_Info, "Initiating dispatchers startup...");
+    /* Set up the OpenEM dispatchers config */
     SEventDispatcherConfig dispatcherConfig = {
         .Cores = numOfCpus,
         .OdpInstance = odpInstance,
         .EmConf = emConf,
         .AppLibs = appLibs,
-        .WorkConfig = {
+        .WorkersConfig = {
             .NodeId = startupParams->NodeId
         },
         .MessagingConfig = {
@@ -70,23 +65,19 @@ int main(int argc, char **argv) {
         }
     };
     (void) strcpy(dispatcherConfig.MessagingConfig.NetworkingConfig.DeviceName, startupParams->NetworkInterface);
-    /* Free startup params as not needed anymore */
-    free(startupParams);
+    /* Release the startup params as not needed anymore */
+    ReleaseStartupParams(startupParams);
+
+    /* Run the platform on top of EM dispatchers */
     RunEventDispatchers(&dispatcherConfig);
 
-    AssertTrue(EM_OK == em_term(emConf));
-    AssertTrue(0 == odp_term_local());
-    LogPrint(ELogSeverityLevel_Info, "Main dispatcher shutdown complete");
-
-    LogPrint(ELogSeverityLevel_Info, "Tearing down ODP globally...");
-    AssertTrue(0 == odp_term_global(odpInstance));
+    UnloadApplicationLibraries(appLibs);
+    /* Platform torn down, clean up OpenEM and ODP */
+    TearDownEventMachine(emConf);
+    TearDownOpenDataPlane(odpInstance);
 
     LogPrint(ELogSeverityLevel_Info, "Platform shutdown complete");
 
-    free(emConf);
-    free(appLibs);
-
-    /* Let the OS unlink application libraries and clean everything up. */
     return 0;
 }
 

@@ -19,6 +19,8 @@ SAppLibsSet * LoadApplicationLibraries(void) {
     const char * libListEnv = getenv(APP_LIB_LIST_ENV);
     if (libListEnv) {
 
+        LogPrint(ELogSeverityLevel_Info, "Loading application libraries...");
+
         size_t libListLen = strlen(libListEnv);
         /* Allocate a copy on the heap to tokenize the string and leave
          * the environment intact */
@@ -39,7 +41,7 @@ SAppLibsSet * LoadApplicationLibraries(void) {
             token = strtok_r(NULL, ":", &saveptr);
         }
 
-        LogPrint(ELogSeverityLevel_Info, "Loaded %d application libraries", \
+        LogPrint(ELogSeverityLevel_Info, "Number of loaded application libraries: %d", \
             handles->Count);
 
         free(libList);
@@ -52,6 +54,13 @@ SAppLibsSet * LoadApplicationLibraries(void) {
     }
 
     return handles;
+}
+
+void UnloadApplicationLibraries(SAppLibsSet * appLibs) {
+
+    /* Only free the handle and let the OS unlink the libraries
+     * when the process exits */
+    free(appLibs);
 }
 
 static int LoadLibrary(const char * name, SAppLib * handle) {

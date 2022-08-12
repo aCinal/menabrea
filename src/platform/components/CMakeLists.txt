@@ -14,7 +14,7 @@ add_subdirectory(log)
 add_subdirectory(messaging)
 add_subdirectory(startup)
 add_subdirectory(timing)
-add_subdirectory(work)
+add_subdirectory(workers)
 
 target_link_libraries(menabrea
     # Link against platform components
@@ -27,7 +27,7 @@ target_link_libraries(menabrea
     messaging_network
     startup
     timing
-    work
+    workers
     # Link against EM-ODP
     emodp
     odp-linux

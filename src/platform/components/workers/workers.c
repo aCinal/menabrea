@@ -1,7 +1,7 @@
 
 #include <menabrea/workers.h>
-#include <work/worker_table.h>
-#include <work/completion_daemon.h>
+#include <workers/worker_table.h>
+#include <workers/completion_daemon.h>
 #include <cores/queue_groups.h>
 #include <menabrea/exception.h>
 #include <menabrea/log.h>
@@ -274,7 +274,8 @@ static em_status_t WorkerEoStart(void * eoCtx, em_eo_t eo, const em_eo_conf_t * 
         int userStatus = context->UserInit();
         if (userStatus) {
 
-            LogPrint(ELogSeverityLevel_Warning, "User's global initialization function for worker %s failed (return value: %d)", \
+            LogPrint(ELogSeverityLevel_Warning, \
+                "User's global initialization function for worker '%s' failed (return value: %d)", \
                 context->Name, userStatus);
             /* Return error, resources will be cleaned up in the 'DeployWorker' function */
             return EM_ERROR;

@@ -2,7 +2,7 @@
 #include <messaging/local/router.h>
 #include <messaging/network/router.h>
 #include <messaging/message.h>
-#include <work/worker_table.h>
+#include <workers/worker_table.h>
 #include <menabrea/exception.h>
 #include <menabrea/log.h>
 #include <event_machine.h>

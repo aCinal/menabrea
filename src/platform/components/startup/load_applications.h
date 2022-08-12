@@ -31,5 +31,6 @@ typedef struct SAppLibsSet {
 } SAppLibsSet;
 
 SAppLibsSet * LoadApplicationLibraries(void);
+void UnloadApplicationLibraries(SAppLibsSet * appLibs);
 
 #endif /* PLATFORM_COMPONENTS_STARTUP_LOAD_APPLICATIONS_H */

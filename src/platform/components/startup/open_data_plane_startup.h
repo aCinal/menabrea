@@ -9,5 +9,6 @@ typedef struct SOdpStartupConfig {
 } SOdpStartupConfig;
 
 odp_instance_t InitializeOpenDataPlane(SOdpStartupConfig * config);
+void TearDownOpenDataPlane(odp_instance_t odpInstance);
 
 #endif /* PLATFORM_COMPONENTS_STARTUP_OPEN_DATA_PLANE_STARTUP_H */
