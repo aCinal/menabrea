@@ -29,7 +29,7 @@ static inline bool IsValidLlcHeader(odp_packet_t packet);
 odp_packet_t CreatePacketFromMessage(TMessage message) {
 
     /* Calculate total size of the message */
-    u32 messageSize = GetMessagePayloadSize(message) + sizeof(SMessageHeader);
+    u32 messageSize = GetMessagePayloadSize(message) + MESSAGE_HEADER_LEN;
     /* Size of the Ethernet payload is the message plus an LLC header */
     u32 ethPayloadSize = messageSize + LLC_HEADER_LEN;
     /* Calculate total size of a packet (Ethernet frame) */
@@ -140,7 +140,7 @@ static inline void CopyMessageData(odp_packet_t packet, TMessage message) {
     SLlcHeader * llc = (SLlcHeader *)(eth + 1);
     void * data = llc + 1;
     /* Get the bulk size of the message */
-    u32 len = GetMessagePayloadSize(message) + sizeof(SMessageHeader);
+    u32 len = GetMessagePayloadSize(message) + MESSAGE_HEADER_LEN;
     /* Copy into Ethernet/LLC data field */
     (void) memcpy(data, GetMessageData(message), len);
 }

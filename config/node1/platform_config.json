@@ -55,6 +55,7 @@
 
     "node_id": 1,
     "network_if": "eth0",
+    "pktio_bufs_kilo": 10,
 
     "environment": {
         "EM_CONFIG_FILE": null,

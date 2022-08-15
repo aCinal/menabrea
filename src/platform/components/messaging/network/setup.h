@@ -7,7 +7,7 @@
 #include <net/if.h>
 
 typedef struct SNetworkingConfig {
-    em_pool_cfg_t PacketPoolConfig; /* TODO: Use this to configure the packet pool */
+    u32 PktioBufs;
     TWorkerId NodeId;
     char DeviceName[IFNAMSIZ];
 } SNetworkingConfig;

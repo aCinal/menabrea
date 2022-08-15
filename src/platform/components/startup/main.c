@@ -60,7 +60,8 @@ int main(int argc, char **argv) {
         .MessagingConfig = {
             .PoolConfig = TranslateToEmPoolConfig(&startupParams->MessagingPoolConfig, EM_EVENT_TYPE_SW),
             .NetworkingConfig = {
-                .NodeId = startupParams->NodeId
+                .NodeId = startupParams->NodeId,
+                .PktioBufs = startupParams->PktioBufferCount
             }
         }
     };

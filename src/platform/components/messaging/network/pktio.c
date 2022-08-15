@@ -5,7 +5,7 @@
 #include <event_machine.h>
 #include <event_machine/platform/event_machine_odp_ext.h>
 
-static em_pool_t CreatePacketPool(void);
+static em_pool_t CreatePacketPool(u32 bufCount);
 static odp_pktio_t CreatePktioDevice(const char * ifName, odp_pool_t odpPool);
 static void CreatePktioQueues(odp_pktio_t pktio);
 /* TODO: Remove this once socket_mmap issue is resolved (see below) */
@@ -15,13 +15,12 @@ static odp_pktio_t s_pktio;
 static odp_pktin_queue_t s_pktinQueue;
 static odp_queue_t s_pktoutQueue;
 
-#define PKTIO_POOL_BUF_COUNT  10 * 1024
 #define PKTIO_POOL_BUF_SIZE   MAX_ETH_PACKET_SIZE
 
-void PktioInit(const char * ifName) {
+void PktioInit(const char * ifName, u32 bufCount) {
 
     /* Create a packet pool */
-    em_pool_t emPool = CreatePacketPool(/* TODO: add configurability */);
+    em_pool_t emPool = CreatePacketPool(bufCount);
 
     /* Convert to ODP pool */
     odp_pool_t odpPool;
@@ -60,7 +59,9 @@ odp_pktin_queue_t GetPktinQueue(void) {
     return s_pktinQueue;
 }
 
-static em_pool_t CreatePacketPool(void) {
+static em_pool_t CreatePacketPool(u32 bufCount) {
+
+    LogPrint(ELogSeverityLevel_Info, "Creating pktio packet pool with %d buffers...", bufCount);
 
     odp_pool_capability_t odpPoolCapa;
     /* Query ODP pool capabilities */
@@ -72,7 +73,7 @@ static em_pool_t CreatePacketPool(void) {
 	emPoolConfig.event_type = EM_EVENT_TYPE_PACKET;
 	emPoolConfig.num_subpools = 1;
 	emPoolConfig.subpool[0].size = PKTIO_POOL_BUF_SIZE;
-	emPoolConfig.subpool[0].num = PKTIO_POOL_BUF_COUNT;
+	emPoolConfig.subpool[0].num = bufCount;
 	/* Use max thread-local cache to speed up pktio allocations */
 	emPoolConfig.subpool[0].cache_size = odpPoolCapa.pkt.max_cache_size;
 

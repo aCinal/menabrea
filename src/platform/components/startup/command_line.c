@@ -23,6 +23,7 @@ SStartupParams * ParseCommandLine(int argc, char **argv) {
         { "messagingPoolConfig", required_argument, NULL, 0 },
         { "nodeId", required_argument, NULL, 0 },
         { "netIf", required_argument, NULL, 0 },
+        { "pktioBufs", required_argument, NULL, 0 },
         { 0, 0, 0, 0 }
     };
     int optionIndex;
@@ -70,6 +71,16 @@ SStartupParams * ParseCommandLine(int argc, char **argv) {
                 params->NetworkInterface);
             break;
 
+        case 4:
+            AssertTrue(0 == strcmp("pktioBufs", longOptions[optionIndex].name));
+            LogPrint(ELogSeverityLevel_Debug, "Parsing pktio buffer count...");
+            params->PktioBufferCount = strtol(optarg, &endptr, 0);
+            /* Assert a number was parsed */
+            AssertTrue(endptr != optarg);
+            LogPrint(ELogSeverityLevel_Debug, "Packet I/O buffer count set to %d", \
+                params->PktioBufferCount);
+            break;
+
         default:
             /* Should never get here */
             RaiseException(EExceptionFatality_Fatal, 0, \
@@ -97,6 +108,7 @@ static void SetDefaults(SStartupParams * params) {
     SetDefaultPoolConfig(&params->MessagingPoolConfig);
 
     params->NodeId = WORKER_ID_INVALID;
+    params->PktioBufferCount = 10;
 
     (void) strcpy(params->NetworkInterface, "eth0");
 }

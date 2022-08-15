@@ -32,7 +32,7 @@ void MessagingNetworkInit(SNetworkingConfig * config) {
     SetMacAddress(config->DeviceName, macAddr);
 
     /* Initialize pktio */
-    PktioInit(config->DeviceName);
+    PktioInit(config->DeviceName, config->PktioBufs);
 
     /* Register an input poll callback */
     RegisterInputPolling(NetworkInputPoll, GetAllCoresMask());

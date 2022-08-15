@@ -3,7 +3,7 @@
 
 TMessage CreateMessage(TMessageId msgId, u32 payloadSize) {
 
-    em_event_t event = em_alloc(sizeof(SMessageHeader) + payloadSize, EM_EVENT_TYPE_SW, MESSAGING_EVENT_POOL);
+    em_event_t event = em_alloc(MESSAGE_HEADER_LEN + payloadSize, EM_EVENT_TYPE_SW, MESSAGING_EVENT_POOL);
 
     if (likely(event != EM_EVENT_UNDEF)) {
 
@@ -81,7 +81,7 @@ TWorkerId GetMessageReceiver(TMessage message) {
 bool IsValidMessage(void * buffer, u32 size) {
 
     /* Check if a buffer, e.g. packet, has a structure of a message */
-    if (unlikely(size < sizeof(SMessageHeader))) {
+    if (unlikely(size < MESSAGE_HEADER_LEN)) {
 
         /* Not safe to access the message header */
         return false;
@@ -96,7 +96,7 @@ bool IsValidMessage(void * buffer, u32 size) {
         return false;
     }
 
-    if (unlikely(size < msgData->Header.PayloadSize + sizeof(SMessageHeader))) {
+    if (unlikely(size < msgData->Header.PayloadSize + MESSAGE_HEADER_LEN)) {
 
         /* Invalid payload size - allow buffer size to be larger, e.g. to support
          * Ethernet frame padding */

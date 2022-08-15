@@ -49,6 +49,10 @@ def format_command_line(config: Dict[str, Any]) -> List[str]:
     command_line.append("--defaultPoolConfig")
     command_line.append(serialize_event_pool_config(config["event_pools"]["messaging"]))
 
+    pktio_bufs = config["pktio_bufs_kilo"] * 1024
+    command_line.append("--pktioBufs")
+    command_line.append(f"{pktio_bufs}")
+
     return command_line
 
 def serialize_event_pool_config(pool_config: Dict[str, int]) -> str:

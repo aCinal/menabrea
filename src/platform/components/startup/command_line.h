@@ -25,6 +25,7 @@ typedef struct SPoolConfig {
 typedef struct SStartupParams {
     SPoolConfig DefaultPoolConfig;
     SPoolConfig MessagingPoolConfig;
+    u32 PktioBufferCount;
     TWorkerId NodeId;
     char NetworkInterface[IFNAMSIZ];
 } SStartupParams;
