@@ -43,11 +43,17 @@ def format_command_line(config: Dict[str, Any]) -> List[str]:
     command_line.append("--netIf")
     command_line.append(f"{network_if}")
 
-    command_line.append("--messagingPoolConfig")
-    command_line.append(serialize_event_pool_config(config["event_pools"]["default"]))
-
+    # Configure the default event pool used by EM
     command_line.append("--defaultPoolConfig")
-    command_line.append(serialize_event_pool_config(config["event_pools"]["messaging"]))
+    command_line.append(serialize_pool_config(config["pools"]["default"]))
+
+    # Configure the message pool
+    command_line.append("--messagePoolConfig")
+    command_line.append(serialize_pool_config(config["pools"]["message"]))
+
+    # Configure the memory pool for application allocations
+    command_line.append("--memoryPoolConfig")
+    command_line.append(serialize_pool_config(config["pools"]["memory"]))
 
     pktio_bufs = config["pktio_bufs_kilo"] * 1024
     command_line.append("--pktioBufs")
@@ -55,7 +61,7 @@ def format_command_line(config: Dict[str, Any]) -> List[str]:
 
     return command_line
 
-def serialize_event_pool_config(pool_config: Dict[str, int]) -> str:
+def serialize_pool_config(pool_config: Dict[str, int]) -> str:
     """Parse event pool config and format it for use as command-line argument."""
     num_subpools = pool_config["num_subpools"]
     serialized = f"{num_subpools}"

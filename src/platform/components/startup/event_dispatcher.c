@@ -68,6 +68,8 @@ typedef struct SStartupSharedMemory {
     SWorkersConfig WorkersConfig;
     /* Messaging subsystem configuration */
     SMessagingConfig MessagingConfig;
+    /* Memory subsystem configuration */
+    SMemoryConfig MemoryConfig;
     /* ODP barriers for EM-cores synchronization */
     odp_barrier_t OdpStartBarrier;
     odp_barrier_t OdpExitBarrier;
@@ -111,6 +113,7 @@ static inline SStartupSharedMemory * CreatePlatformSharedMemory(SEventDispatcher
     shmPtr->DispatcherExitFlag = 0;
     shmPtr->WorkersConfig = config->WorkersConfig;
     shmPtr->MessagingConfig = config->MessagingConfig;
+    shmPtr->MemoryConfig = config->MemoryConfig;
 
     /* Initialize the sync primitives */
     odp_barrier_init(&shmPtr->OdpStartBarrier, config->Cores);
@@ -241,6 +244,8 @@ static inline void RunPlatformGlobalInit(void) {
     MessagingInit(&s_platformShmem->MessagingConfig);
     /* Initialize the timers component */
     TimingInit();
+    /* Initialize the memory pool for application use */
+    MemorySetup(&s_platformShmem->MemoryConfig);
 }
 
 static inline void RunPlatformGlobalTeardown(void) {
@@ -261,6 +266,9 @@ static inline void RunPlatformGlobalTeardown(void) {
 
     /* Dispatch lingering events and exit */
     FinalizeExit();
+
+    /* Tear down application memory pool */
+    MemoryTeardown();
 }
 
 static inline void DispatcherEntryPoint(void) {

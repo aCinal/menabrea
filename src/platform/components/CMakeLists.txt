@@ -11,6 +11,7 @@ add_subdirectory(cores)
 add_subdirectory(exception)
 add_subdirectory(input)
 add_subdirectory(log)
+add_subdirectory(memory)
 add_subdirectory(messaging)
 add_subdirectory(startup)
 add_subdirectory(timing)
@@ -20,8 +21,9 @@ target_link_libraries(menabrea
     # Link against platform components
     cores
     exception
-    log
     input
+    log
+    memory
     messaging_common
     messaging_local
     messaging_network

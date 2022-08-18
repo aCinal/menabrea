@@ -58,11 +58,14 @@ int main(int argc, char **argv) {
             .NodeId = startupParams->NodeId
         },
         .MessagingConfig = {
-            .PoolConfig = TranslateToEmPoolConfig(&startupParams->MessagingPoolConfig, EM_EVENT_TYPE_SW),
+            .PoolConfig = TranslateToEmPoolConfig(&startupParams->MessagePoolConfig, EM_EVENT_TYPE_SW),
             .NetworkingConfig = {
                 .NodeId = startupParams->NodeId,
                 .PktioBufs = startupParams->PktioBufferCount
             }
+        },
+        .MemoryConfig = {
+            .PoolConfig = TranslateToEmPoolConfig(&startupParams->MemoryPoolConfig, EM_EVENT_TYPE_SW)
         }
     };
     (void) strcpy(dispatcherConfig.MessagingConfig.NetworkingConfig.DeviceName, startupParams->NetworkInterface);

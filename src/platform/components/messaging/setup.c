@@ -16,7 +16,7 @@ void MessagingTeardown(void) {
 
     MessagingNetworkTeardown();
 
-    LogPrint(ELogSeverityLevel_Info, "Deleting the event pool...");
+    LogPrint(ELogSeverityLevel_Info, "Deleting the message pool...");
     /* Delete the event pool */
     AssertTrue(EM_OK ==  em_pool_delete(MESSAGING_EVENT_POOL));
 }

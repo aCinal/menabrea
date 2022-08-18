@@ -5,6 +5,7 @@
 #include <startup/load_applications.h>
 #include <workers/setup.h>
 #include <messaging/setup.h>
+#include <memory/setup.h>
 #include <odp_api.h>
 #include <event_machine.h>
 
@@ -15,6 +16,7 @@ typedef struct SEventDispatcherConfig {
     SAppLibsSet * AppLibs;
     SWorkersConfig WorkersConfig;
     SMessagingConfig MessagingConfig;
+    SMemoryConfig MemoryConfig;
 } SEventDispatcherConfig;
 
 void RunEventDispatchers(SEventDispatcherConfig * config);

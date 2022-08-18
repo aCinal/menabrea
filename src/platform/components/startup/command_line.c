@@ -19,8 +19,9 @@ SStartupParams * ParseCommandLine(int argc, char **argv) {
     SetDefaults(params);
 
     const struct option longOptions[] = {
-        { "defaultPoolConfig", required_argument, NULL, 0},
-        { "messagingPoolConfig", required_argument, NULL, 0 },
+        { "defaultPoolConfig", required_argument, NULL, 0 },
+        { "messagePoolConfig", required_argument, NULL, 0 },
+        { "memoryPoolConfig", required_argument, NULL, 0 },
         { "nodeId", required_argument, NULL, 0 },
         { "netIf", required_argument, NULL, 0 },
         { "pktioBufs", required_argument, NULL, 0 },
@@ -44,13 +45,20 @@ SStartupParams * ParseCommandLine(int argc, char **argv) {
             break;
 
         case 1:
-            AssertTrue(0 == strcmp("messagingPoolConfig", longOptions[optionIndex].name));
-            LogPrint(ELogSeverityLevel_Debug, "Parsing the messaging pool config...");
-            ParsePoolConfig(optarg, &params->MessagingPoolConfig);
-            PrintPoolConfig(&params->MessagingPoolConfig);
+            AssertTrue(0 == strcmp("messagePoolConfig", longOptions[optionIndex].name));
+            LogPrint(ELogSeverityLevel_Debug, "Parsing the message pool config...");
+            ParsePoolConfig(optarg, &params->MessagePoolConfig);
+            PrintPoolConfig(&params->MessagePoolConfig);
             break;
 
         case 2:
+            AssertTrue(0 == strcmp("memoryPoolConfig", longOptions[optionIndex].name));
+            LogPrint(ELogSeverityLevel_Debug, "Parsing the memory pool config...");
+            ParsePoolConfig(optarg, &params->MemoryPoolConfig);
+            PrintPoolConfig(&params->MemoryPoolConfig);
+            break;
+
+        case 3:
             AssertTrue(0 == strcmp("nodeId", longOptions[optionIndex].name));
             LogPrint(ELogSeverityLevel_Debug, "Parsing node ID...");
             params->NodeId = strtol(optarg, &endptr, 0);
@@ -61,7 +69,7 @@ SStartupParams * ParseCommandLine(int argc, char **argv) {
                 params->NodeId);
             break;
 
-        case 3:
+        case 4:
             AssertTrue(0 == strcmp("netIf", longOptions[optionIndex].name));
             LogPrint(ELogSeverityLevel_Debug, "Parsing network interface...");
             /* Copy the name and ensure proper NULL-termination (see strncpy manpage) */
@@ -71,7 +79,7 @@ SStartupParams * ParseCommandLine(int argc, char **argv) {
                 params->NetworkInterface);
             break;
 
-        case 4:
+        case 5:
             AssertTrue(0 == strcmp("pktioBufs", longOptions[optionIndex].name));
             LogPrint(ELogSeverityLevel_Debug, "Parsing pktio buffer count...");
             params->PktioBufferCount = strtol(optarg, &endptr, 0);
@@ -105,7 +113,8 @@ static void SetDefaults(SStartupParams * params) {
 
     /* Configure the event pools */
     SetDefaultPoolConfig(&params->DefaultPoolConfig);
-    SetDefaultPoolConfig(&params->MessagingPoolConfig);
+    SetDefaultPoolConfig(&params->MessagePoolConfig);
+    SetDefaultPoolConfig(&params->MemoryPoolConfig);
 
     params->NodeId = WORKER_ID_INVALID;
     params->PktioBufferCount = 10;
