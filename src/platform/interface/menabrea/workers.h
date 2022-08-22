@@ -78,7 +78,7 @@ TWorkerId GetOwnNodeId(void);
  * @note Return 0 to indicate success and that the framework should proceed with deployment,
  *       non-zero return value indicates failure and deployment will cease
  */
-typedef int (* TUserInitCallback)(void);
+typedef int (* TUserInitCallback)(void * arg);
 
 /**
  * @brief User-provided per-core init function
@@ -112,6 +112,7 @@ typedef void (* TUserHandlerCallback)(TMessage message);
  */
 typedef struct SWorkerConfig {
     const char * Name;                     /**< Human-readable name */
+    void * InitArg;                        /**< Private argument passed to the UserInit function if any provided */
     TWorkerId WorkerId;                    /**< Worker identifier */
     int CoreMask;                          /**< Mask of cores on which the worker is eligible to run */
     bool Parallel;                         /**< Flag denoting whether the worker can be run in parallel on multiple cores at the same time */

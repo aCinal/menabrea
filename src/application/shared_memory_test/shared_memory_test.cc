@@ -6,7 +6,7 @@
 #include <menabrea/cores.h>
 #include <menabrea/memory.h>
 
-static int WorkerInit(void);
+static int WorkerInit(void * arg);
 static void WorkerLocalInit(int core);
 static void WorkerLocalExit(int core);
 static void WorkerBody(TMessage message);
@@ -53,7 +53,9 @@ extern "C" void ApplicationGlobalExit(void) {
     }
 }
 
-static int WorkerInit(void) {
+static int WorkerInit(void * arg) {
+
+    (void) arg;
 
     /* Allocate memory for a pointer */
     s_pointySharedMemory = (void **) GetMemory(sizeof(void *));

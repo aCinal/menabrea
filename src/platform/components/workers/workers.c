@@ -41,6 +41,7 @@ TWorkerId DeployWorker(const SWorkerConfig * config) {
     context->UserLocalExit = config->UserLocalExit;
     context->UserExit = config->UserExit;
     context->WorkerBody = config->WorkerBody;
+    context->InitArg = config->InitArg;
     /* Copy the name and ensure proper NULL-termination (see strncpy manpage) */
     (void) strncpy(context->Name, config->Name, sizeof(context->Name) - 1);
     context->Name[sizeof(context->Name) - 1] = '\0';
@@ -271,7 +272,7 @@ static em_status_t WorkerEoStart(void * eoCtx, em_eo_t eo, const em_eo_conf_t * 
     if (context->UserInit) {
 
         /* Call user-provided initialization function */
-        int userStatus = context->UserInit();
+        int userStatus = context->UserInit(context->InitArg);
         if (userStatus) {
 
             LogPrint(ELogSeverityLevel_Warning, \

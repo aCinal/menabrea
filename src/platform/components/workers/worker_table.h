@@ -22,6 +22,7 @@ typedef struct SWorkerContext {
     TUserLocalExitCallback UserLocalExit;
     TUserExitCallback UserExit;
     TUserHandlerCallback WorkerBody;
+    void * InitArg;
     TMessage MessageBuffer[MESSAGE_BUFFER_LENGTH];
     char Name[MAX_WORKER_NAME_LEN];
     int CoreMask;
