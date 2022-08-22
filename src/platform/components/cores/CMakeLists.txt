@@ -1,5 +1,5 @@
 set(SOURCES
-    masks.c
+    cores.c
     queue_groups.c
 )
 

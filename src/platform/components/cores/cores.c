@@ -1,6 +1,16 @@
 #include <menabrea/cores.h>
 #include <event_machine.h>
 
+int GetCurrentCore(void) {
+
+    return em_core_id();
+}
+
+int GetCurrentCoreMask(void) {
+
+    return (1 << em_core_id());
+}
+
 int GetSharedCoreMask(void) {
 
     /* Core 0 is always shared */

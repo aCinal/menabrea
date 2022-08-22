@@ -7,6 +7,18 @@ extern "C" {
 #endif
 
 /**
+ * @brief Return the zero-based index of the current core
+ * @return Index of the current core
+ */
+int GetCurrentCore(void);
+
+/**
+ * @brief Return the core mask corresponding to the current core
+ * @return Mask of the current core
+ */
+int GetCurrentCoreMask(void);
+
+/**
  * @brief Return a core mask corresponding to the shared core (suitable for non-critical applications)
  * @return Mask of the shared core
  * @note Platform operates on the assumption that one physical core is shared between EM-ODP
