@@ -47,7 +47,7 @@ void InstallSignalHandlers(void) {
 
     struct sigaction act = {
         .sa_sigaction = CommonHandler,
-        .sa_flags = SA_SIGINFO | SA_NOCLDSTOP | SA_RESTART,
+        .sa_flags = SA_SIGINFO | SA_NOCLDSTOP | SA_RESTART
     };
     sigemptyset(&act.sa_mask);
 
@@ -59,6 +59,15 @@ void InstallSignalHandlers(void) {
     assert(0 == sigaction(SIGCHLD, &act, NULL));
     assert(0 == sigaction(SIGTERM, &act, NULL));
     assert(0 == sigaction(SIGINT, &act, NULL));
+
+
+    /* Ignore the SIGPIPE signal */
+    struct sigaction ign = {
+        .sa_handler = SIG_IGN
+    };
+    sigemptyset(&ign.sa_mask);
+
+    assert(0 == sigaction(SIGPIPE, &ign, NULL));
 }
 
 int ListenForSignal(int signo, TUserSignalListener callback) {
