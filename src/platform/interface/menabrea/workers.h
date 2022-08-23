@@ -183,6 +183,22 @@ static inline TWorkerId DeploySimpleParallelWorker(const char * name, TWorkerId 
 void TerminateWorker(TWorkerId workerId);
 
 /**
+ * @brief Access worker's shared private context data
+ * @return Current worker's shared data handle (same for all cores)
+ * @note Different cores correspond to different virtual address spaces so a pointer valid on one core
+ *       need not be valid on another
+ */
+void * GetSharedData(void);
+
+/**
+ * @brief Set worker's shared private context data
+ * @param data Private shared data
+ * @note Different cores correspond to different virtual address spaces so a pointer valid on one core
+ *       need not be valid on another
+ */
+void SetSharedData(void * data);
+
+/**
  * @brief Access worker's per-core private context data
  * @return Current worker's private data handle (unique per core)
  */

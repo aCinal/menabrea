@@ -204,9 +204,10 @@ static void ResetContext(SWorkerContext * context) {
     context->TerminationRequested = false;
 
     /* Clear application private data */
+    context->SharedData = NULL;
     for (int i = 0; i < em_core_count(); i++) {
 
-        context->Private[i] = NULL;
+        context->LocalData[i] = NULL;
     }
 
     /* Clear event buffer */

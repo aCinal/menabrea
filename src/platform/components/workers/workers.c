@@ -41,7 +41,8 @@ TWorkerId DeployWorker(const SWorkerConfig * config) {
     context->UserLocalExit = config->UserLocalExit;
     context->UserExit = config->UserExit;
     context->WorkerBody = config->WorkerBody;
-    context->InitArg = config->InitArg;
+    /* Use the shared data field to pass the init argument to save space */
+    context->SharedData = config->InitArg;
     /* Copy the name and ensure proper NULL-termination (see strncpy manpage) */
     (void) strncpy(context->Name, config->Name, sizeof(context->Name) - 1);
     context->Name[sizeof(context->Name) - 1] = '\0';
@@ -199,6 +200,24 @@ void TerminateWorker(TWorkerId workerId) {
     }
 }
 
+void * GetSharedData(void) {
+
+    em_eo_t self = em_eo_current();
+    /* Do not allow calling this function from a non-EO context */
+    AssertTrue(self != EM_EO_UNDEF);
+    SWorkerContext * context = (SWorkerContext *) em_eo_get_context(self);
+    return context->SharedData;
+}
+
+void SetSharedData(void * data) {
+
+    em_eo_t self = em_eo_current();
+    /* Do not allow calling this function from a non-EO context */
+    AssertTrue(self != EM_EO_UNDEF);
+    SWorkerContext * context = (SWorkerContext *) em_eo_get_context(self);
+    context->SharedData = data;
+}
+
 void * GetLocalData(void) {
 
     em_eo_t self = em_eo_current();
@@ -207,7 +226,7 @@ void * GetLocalData(void) {
     SWorkerContext * context = (SWorkerContext *) em_eo_get_context(self);
     int core = em_core_id();
     /* Return data local to the current core */
-    return context->Private[core];
+    return context->LocalData[core];
 }
 
 void SetLocalData(void * data) {
@@ -218,7 +237,7 @@ void SetLocalData(void * data) {
     SWorkerContext * context = (SWorkerContext *) em_eo_get_context(self);
     int core = em_core_id();
     /* Set data local to the current core */
-    context->Private[core] = data;
+    context->LocalData[core] = data;
 }
 
 TWorkerId GetOwnWorkerId(void) {
@@ -271,8 +290,9 @@ static em_status_t WorkerEoStart(void * eoCtx, em_eo_t eo, const em_eo_conf_t * 
 
     if (context->UserInit) {
 
-        /* Call user-provided initialization function */
-        int userStatus = context->UserInit(context->InitArg);
+        /* Call user-provided initialization function (note that the shared data field is
+         * used during worker startup to pass the init argument) */
+        int userStatus = context->UserInit(context->SharedData);
         if (userStatus) {
 
             LogPrint(ELogSeverityLevel_Warning, \
