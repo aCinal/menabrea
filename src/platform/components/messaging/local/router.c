@@ -4,7 +4,7 @@
 #include <menabrea/log.h>
 #include <workers/worker_table.h>
 
-int RouteIntranodeMessage(TMessage message) {
+void RouteIntranodeMessage(TMessage message) {
 
     TWorkerId receiver = GetMessageReceiver(message);
 
@@ -22,12 +22,10 @@ int RouteIntranodeMessage(TMessage message) {
                 GetMessageId(message), GetMessageSender(message), GetMessageReceiver(message));
             /* We are still the owners of the message and must return it to the system */
             DestroyMessage(message);
-            /* No messages enqueued into EM */
-            return 0;
+            return;
         }
         UnlockWorkerTableEntry(receiver);
-        /* Enqueued one message into EM */
-        return 1;
+        break;
 
     case EWorkerState_Deploying:
         /* Worker still starting up - buffer the message */
@@ -39,20 +37,16 @@ int RouteIntranodeMessage(TMessage message) {
                 " - deployment not yet complete and the message buffer is full", \
                 GetMessageId(message), GetMessageSender(message), GetMessageReceiver(message));
             DestroyMessage(message);
-            /* No messages enqueued into EM - return 0 */
-            return 0;
+            return;
         }
-
         UnlockWorkerTableEntry(receiver);
-        /* No messages enqueued into EM */
-        return 0;
+        break;
 
     default:
         UnlockWorkerTableEntry(receiver);
         LogPrint(ELogSeverityLevel_Warning, "Failed to send message 0x%x (sender: 0x%x, receiver: 0x%x) - invalid receiver state: %d", \
             GetMessageId(message), GetMessageSender(message), GetMessageReceiver(message), state);
         DestroyMessage(message);
-        /* No messages enqueued into EM */
-        return 0;
+        break;
     }
 }

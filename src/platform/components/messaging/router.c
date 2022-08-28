@@ -39,10 +39,10 @@ void SendMessage(TMessage message, TWorkerId receiver) {
     }
     msgData->Header.Receiver = receiver;
 
-    (void) RouteMessage(message);
+    RouteMessage(message);
 }
 
-int RouteMessage(TMessage message) {
+void RouteMessage(TMessage message) {
 
     SMessage * msgData = (SMessage *) em_event_pointer(message);
     TWorkerId receiver = msgData->Header.Receiver;
@@ -51,14 +51,12 @@ int RouteMessage(TMessage message) {
 
         /* Worker local to the current node - enqueue the message via EM */
 
-        return RouteIntranodeMessage(message);
+        RouteIntranodeMessage(message);
 
     } else {
 
         /* Remote worker - push the message out a network interface */
 
         RouteInternodeMessage(message);
-        /* No messages get enqueued into EM when routing to remote nodes */
-        return 0;
     }
 }

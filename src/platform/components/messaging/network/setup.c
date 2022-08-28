@@ -8,7 +8,7 @@
 
 #define MAX_RX_BURST  32
 
-static int NetworkInputPoll(void);
+static void NetworkInputPoll(void);
 
 static u8 s_originalMacAddr[MAC_ADDR_LEN];
 static char s_ifName[IFNAMSIZ];
@@ -46,18 +46,10 @@ void MessagingNetworkTeardown(void) {
     SetMacAddress(s_ifName, s_originalMacAddr);
 }
 
-static int NetworkInputPoll(void) {
+static void NetworkInputPoll(void) {
 
-    int packetsEnqueued = 0;
-    int packetsReceived;
     odp_packet_t packets[MAX_RX_BURST];
-
-    packetsReceived = odp_pktin_recv(GetPktinQueue(), packets, MAX_RX_BURST);
-    if (unlikely(packetsReceived <= 0)) {
-
-        return 0;
-    }
-
+    int packetsReceived = odp_pktin_recv(GetPktinQueue(), packets, MAX_RX_BURST);
     for (int i = 0; i < packetsReceived; i++) {
 
         odp_packet_t packet = packets[i];
@@ -65,11 +57,9 @@ static int NetworkInputPoll(void) {
         if (likely(message != MESSAGE_INVALID)) {
 
             /* Route the event/message locally */
-            packetsEnqueued += RouteMessage(message);
+            RouteMessage(message);
         }
 
         odp_packet_free(packet);
     }
-
-    return packetsEnqueued;
 }

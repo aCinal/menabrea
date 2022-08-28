@@ -2,8 +2,6 @@
 #include <menabrea/input.h>
 #include <menabrea/common.h>
 #include <menabrea/log.h>
-#include <menabrea/exception.h>
-#include <event_machine.h>
 
 #define MAX_INPUT_CALLBACKS  16
 
@@ -15,6 +13,11 @@ typedef struct SInputPollCallback {
 static SInputPollCallback s_inputPollCallbacks[MAX_INPUT_CALLBACKS];
 static u32 s_numOfCallbacks = 0;
 static bool s_pollingEnabled = false;
+/* Private (per core) variables used to trace the number of events sent
+ * from the context of the input poll function to give a hint to the
+ * scheduler */
+static bool s_inInputPollCallback = false;
+static int s_totalEventsEnqueued = 0;
 
 void RegisterInputPolling(TInputPollCallback callback, int coreMask) {
 
@@ -35,7 +38,8 @@ void RegisterInputPolling(TInputPollCallback callback, int coreMask) {
 
 int EmInputPollFunction(void) {
 
-    int totalEventsEnqueued = 0;
+    s_inInputPollCallback = true;
+    s_totalEventsEnqueued = 0;
 
     if (likely(s_pollingEnabled)) {
 
@@ -44,15 +48,13 @@ int EmInputPollFunction(void) {
             int core = em_core_id();
             if (s_inputPollCallbacks[i].CoreMask & (1 << core)) {
 
-                int eventsEnqueued = s_inputPollCallbacks[i].Callback();
-                /* Raise exception if an application returns a negative value */
-                AssertTrue(eventsEnqueued >= 0);
-                totalEventsEnqueued += eventsEnqueued;
+                s_inputPollCallbacks[i].Callback();
             }
         }
     }
 
-    return totalEventsEnqueued;
+    s_inInputPollCallback = false;
+    return s_totalEventsEnqueued;
 }
 
 void EnableInputPolling(void) {
@@ -63,4 +65,16 @@ void EnableInputPolling(void) {
 void DisableInputPolling(void) {
 
     s_pollingEnabled = false;
+}
+
+void EmApiHookSend(const em_event_t events[], int num, em_queue_t queue, em_event_group_t eventGroup) {
+
+    (void) events;
+    (void) queue;
+    (void) eventGroup;
+
+    if (unlikely(s_inInputPollCallback)) {
+
+        s_totalEventsEnqueued += num;
+    }
 }

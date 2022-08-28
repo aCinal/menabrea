@@ -8,11 +8,9 @@ extern "C" {
 
 /**
  * @brief Callback executed periodically in the dispatch loop
- * @note The callback should return the number of messages sent from its context
- *       as a hint to the EM scheduler
  * @warning This function must not use blocking system calls or delay for long
  */
-typedef int (*TInputPollCallback)(void);
+typedef void (*TInputPollCallback)(void);
 
 /**
  * @brief Register a callback that will be called periodically to poll for external input

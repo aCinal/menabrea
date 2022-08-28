@@ -246,10 +246,14 @@ static inline void RunPlatformGlobalInit(void) {
     TimingInit();
     /* Initialize the memory pool for application use */
     MemorySetup(&s_platformShmem->MemoryConfig);
+    /* Register an em_send() hook exposed by the input component */
+    AssertTrue(EM_OK == em_hooks_register_send(EmApiHookSend));
 }
 
 static inline void RunPlatformGlobalTeardown(void) {
 
+    /* Deregister an em_send() hook exposed by the input component */
+    AssertTrue(EM_OK == em_hooks_unregister_send(EmApiHookSend));
     /* Cancel any timers left running by the application */
     CancelAllTimers();
     /* Tear down any workers left behind by the application */
