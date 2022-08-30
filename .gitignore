@@ -8,3 +8,4 @@ layers/*
 !layers/meta-menabrea-app
 !layers/meta-menabrea-kernel
 !layers/meta-menabrea-platform
+!layers/meta-menabrea-platform-test

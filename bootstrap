@@ -50,4 +50,8 @@ bitbake-layers add-layer ../layers/meta-menabrea-platform &&
 echo "Adding application layer..." &&
 bitbake-layers add-layer ../layers/meta-menabrea-app &&
 
+# Add platform test layer
+echo "Adding platform test layer..." &&
+bitbake-layers add-layer ../layers/meta-menabrea-platform-test &&
+
 echo "All done"
