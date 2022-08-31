@@ -30,6 +30,9 @@ def make_run_command(case: Dict[str, Any]) -> str:
     command = "run " + case["name"]
 
     for key, value in case["params"].items():
+        if type(value) == bool:
+            # Convert 'True' to 'true' and 'False' to 'false
+            value = str(value).lower()
         command += f" {key}={value}"
 
     return command

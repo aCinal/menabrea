@@ -12,16 +12,17 @@ Instance * GetInstanceByName(const char * name) {
     return s_casesDatabase.find(name) != s_casesDatabase.end() ? s_casesDatabase.at(name) : nullptr;
 }
 
-int Register(const char * name, Instance * instance) {
+int Register(Instance * instance) {
 
-    if (GetInstanceByName(name) == nullptr) {
+    if (GetInstanceByName(instance->GetName()) == nullptr) {
 
-        s_casesDatabase[name] = instance;
+        s_casesDatabase[instance->GetName()] = instance;
         return 0;
 
     } else {
 
-        LogPrint(ELogSeverityLevel_Warning, "Cannot register test case '%s'. Name already in use", name);
+        LogPrint(ELogSeverityLevel_Warning, "Cannot register test case '%s'. Name already in use", \
+            instance->GetName());
         return -1;
     }
 }

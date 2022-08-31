@@ -28,7 +28,7 @@ private:
 };
 
 Instance * GetInstanceByName(const char * name);
-int Register(const char * name, Instance * instance);
+int Register(Instance * instance);
 Instance * Deregister(const char * name);
 
 }

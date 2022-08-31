@@ -154,14 +154,14 @@ void TerminateWorker(TWorkerId workerId) {
     LockWorkerTableEntry(realId);
     SWorkerContext * context = FetchWorkerContext(realId);
 
-    /* Sanity-check internal consistency */
-    AssertTrue(realId == context->WorkerId);
-
     EWorkerState state = context->State;
     switch (state) {
     case EWorkerState_Active:
 
         /* Worker active, can terminate it immediately */
+
+        /* Sanity-check internal consistency */
+        AssertTrue(realId == context->WorkerId);
 
         /* Mark the worker as terminating - the context will be released in the
          * EO stop callback */
@@ -174,6 +174,9 @@ void TerminateWorker(TWorkerId workerId) {
 
         /* Worker deployment still in progress. Defer termination to the platform
          * daemon. */
+
+        /* Sanity-check internal consistency */
+        AssertTrue(realId == context->WorkerId);
 
         if (!context->TerminationRequested) {
 

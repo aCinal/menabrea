@@ -5,6 +5,7 @@
 #include <cases/basic_timing/basic_timing.hh>
 #include <cases/basic_workers/basic_workers.hh>
 #include <cases/message_buffering/message_buffering.hh>
+#include <cases/parallelism/parallelism.hh>
 #include <cases/periodic_timer/periodic_timer.hh>
 #include <cases/shared_memory/shared_memory.hh>
 
@@ -17,11 +18,12 @@ extern "C" void ApplicationGlobalInit(void) {
     TestRunner::Init();
     IpcSocket::Init();
 
-    TestCase::Register("TestBasicTiming", new TestBasicTiming("TestBasicTiming"));
-    TestCase::Register("TestBasicWorkers", new TestBasicWorkers("TestBasicWorkers"));
-    TestCase::Register("TestMessageBuffering", new TestMessageBuffering("TestMessageBuffering"));
-    TestCase::Register("TestPeriodicTimer", new TestPeriodicTimer("TestPeriodicTimer"));
-    TestCase::Register("TestSharedMemory", new TestSharedMemory("TestSharedMemory"));
+    TestCase::Register(new TestBasicTiming("TestBasicTiming"));
+    TestCase::Register(new TestBasicWorkers("TestBasicWorkers"));
+    TestCase::Register(new TestMessageBuffering("TestMessageBuffering"));
+    TestCase::Register(new TestParallelism("TestParallelism"));
+    TestCase::Register(new TestPeriodicTimer("TestPeriodicTimer"));
+    TestCase::Register(new TestSharedMemory("TestSharedMemory"));
 }
 
 extern "C" void ApplicationLocalInit(int core) {
@@ -41,6 +43,7 @@ extern "C" void ApplicationGlobalExit(void) {
     delete TestCase::Deregister("TestBasicTiming");
     delete TestCase::Deregister("TestBasicWorkers");
     delete TestCase::Deregister("TestMessageBuffering");
+    delete TestCase::Deregister("TestParallelism");
     delete TestCase::Deregister("TestPeriodicTimer");
     delete TestCase::Deregister("TestSharedMemory");
 
