@@ -31,7 +31,7 @@ typedef struct SWorkerContext {
     TWorkerId WorkerId;
     em_queue_t Queue;
     em_eo_t Eo;
-    env_spinlock_t Lock;
+    TSpinlock Lock;
     void * SharedData;
     void * LocalData[0];
 } SWorkerContext;

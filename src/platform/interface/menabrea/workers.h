@@ -9,21 +9,22 @@ extern "C" {
 #include <menabrea/common.h>
 #include <event_machine.h>
 
-typedef u16 TWorkerId;                                       /**< Worker identifier type */
-typedef em_event_t TMessage;                                 /**< Opaque message handle */
-#define MESSAGE_INVALID         EM_EVENT_UNDEF               /**< Magic value to signal message allocation failure */
+typedef u16 TWorkerId;                                                         /**< Worker identifier type */
+typedef em_event_t TMessage;                                                   /**< Opaque message handle */
+#define MESSAGE_INVALID           EM_EVENT_UNDEF                               /**< Magic value to signal message allocation failure */
 
-#define WORKER_ID_INVALID       ( (TWorkerId) 0xFFFF )       /**< Magic value used to indicate worker deployment failure and request to allocate ID dynamically */
-#define WORKER_ID_DYNAMIC_BASE  ( (TWorkerId) 0x07FF )       /**< Boundary value between static worker ID pool and dynamic allocation pool */
+#define WORKER_ID_INVALID         ( (TWorkerId) 0xFFFF )                       /**< Magic value used to indicate worker deployment failure and request to allocate ID dynamically */
+#define WORKER_ID_DYNAMIC_BASE    ( (TWorkerId) 0x07FF )                       /**< Boundary value between static worker ID pool and dynamic allocation pool */
 
-#define WORKER_LOCAL_ID_MASK    0x0FFF                       /**< Mask of the local part of the worker ID */
-#define WORKER_LOCAL_ID_BITS    12                           /**< Bitlength of the local part of the worker ID */
-#define WORKER_NODE_ID_MASK     0xF000                       /**< Mask of the node part of the worker ID */
-#define WORKER_NODE_ID_BITS     4                            /**< Bitlength of the node part of the worker ID */
-#define WORKER_NODE_ID_SHIFT    WORKER_LOCAL_ID_BITS         /**< Shift of the node ID in a global (fully qualified) worker ID */
+#define WORKER_LOCAL_ID_MASK      0x0FFF                                       /**< Mask of the local part of the worker ID */
+#define WORKER_LOCAL_ID_BITS      12                                           /**< Bitlength of the local part of the worker ID */
+#define WORKER_NODE_ID_MASK       0xF000                                       /**< Mask of the node part of the worker ID */
+#define WORKER_NODE_ID_BITS       4                                            /**< Bitlength of the node part of the worker ID */
+#define WORKER_NODE_ID_SHIFT      WORKER_LOCAL_ID_BITS                         /**< Shift of the node ID in a global (fully qualified) worker ID */
 
-#define MAX_NODE_ID             3                            /**< Maximum value of the node ID (equal to the number of nodes in the system) */
-#define MAX_WORKER_COUNT        (1 << WORKER_LOCAL_ID_BITS)  /**< Maximum number of workers deployable */
+#define MAX_NODE_ID               3                                            /**< Maximum value of the node ID (equal to the number of nodes in the system) */
+#define MAX_WORKER_COUNT          (1 << WORKER_LOCAL_ID_BITS)                  /**< Maximum number of workers deployable */
+#define DYNAMIC_WORKER_IDS_COUNT  (MAX_WORKER_COUNT - WORKER_ID_DYNAMIC_BASE)  /**< Number of available dynamic worker IDs */
 
 /* Assert consistency between constants at compile time */
 ODP_STATIC_ASSERT(WORKER_ID_DYNAMIC_BASE < MAX_WORKER_COUNT, \

@@ -19,7 +19,7 @@ typedef enum ETimerState {
 typedef struct STimerContext {
     char Name[MAX_TIMER_NAME_LEN];
     em_tmo_t Tmo;
-    env_spinlock_t Lock;
+    TSpinlock Lock;
     TMessage Message;
     TWorkerId Receiver;
     em_timer_tick_t Period;

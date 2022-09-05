@@ -49,6 +49,9 @@ int TestBasicWorkers::StartTest(void * args) {
     case 4:
         return RunSubcase4();
 
+    case 5:
+        return RunSubcase5();
+
     default:
         LogPrint(ELogSeverityLevel_Error, "Invalid subcase %d for test case '%s'", \
             params->Subcase, this->GetName());
@@ -156,14 +159,37 @@ int TestBasicWorkers::RunSubcase4(void) {
     TWorkerId workerId2 = DeploySimpleWorker("Subcase4Worker", DUMMY_WORKER_ID, GetAllCoresMask(), DummyBody);
     if (unlikely(WORKER_ID_INVALID != workerId2)) {
 
-        LogPrint(ELogSeverityLevel_Error, "Second deployment of worker 0x%x unexpectedly succeeded (DeployWorker returned 0x%x)", \
-            DUMMY_WORKER_ID, workerId2);
         TerminateWorker(workerId1);
         TerminateWorker(workerId2);
-        return -1;
+        LogPrint(ELogSeverityLevel_Error, "Second deployment of worker 0x%x unexpectedly succeeded (DeployWorker returned 0x%x) in test '%s'", \
+            DUMMY_WORKER_ID, workerId2, this->GetName());
+        TestRunner::ReportTestResult(TestCase::Result::Failure, \
+            "Second deployment of worker 0x%x unexpectedly succeeded", \
+            DUMMY_WORKER_ID);
+        return 0;
     }
 
     TerminateWorker(workerId1);
+    TestRunner::ReportTestResult(TestCase::Result::Success);
+    return 0;
+}
+
+int TestBasicWorkers::RunSubcase5(void) {
+
+    /* Try deploying a worker with static ID in the dynamic range */
+    TWorkerId workerId = DeploySimpleWorker("Subcase5Worker", WORKER_ID_DYNAMIC_BASE, GetAllCoresMask(), DummyBody);
+    if (unlikely(workerId != WORKER_ID_INVALID)) {
+
+        TerminateWorker(workerId);
+        LogPrint(ELogSeverityLevel_Error, \
+            "Unexpectedly succeeded at deploying a worker with static ID 0x%x in the dynamic range during test '%s'", \
+            WORKER_ID_DYNAMIC_BASE, this->GetName());
+        TestRunner::ReportTestResult(TestCase::Result::Failure, \
+            "Unexpectedly succeeded at deploying a worker with static ID 0x%x", \
+            DUMMY_WORKER_ID);
+        return 0;
+    }
+
     TestRunner::ReportTestResult(TestCase::Result::Success);
     return 0;
 }
@@ -192,3 +218,4 @@ static void DummyBody(TMessage message) {
 
     DestroyMessage(message);
 }
+

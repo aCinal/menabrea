@@ -15,7 +15,18 @@
     } while (0)
 
 static void ResetContext(SWorkerContext * context);
+static inline TWorkerId AllocateDynamicLocalId(void);
+static inline void ReleaseDynamicLocalId(TWorkerId localId);
 
+typedef struct SDynamicIdFifo {
+    TSpinlock Lock;
+    u32 GetIndex;
+    u32 PutIndex;
+    u32 FreeIds;
+    TWorkerId IdPool[DYNAMIC_WORKER_IDS_COUNT];
+} SDynamicIdFifo;
+
+static SDynamicIdFifo * s_idFifo;
 static SWorkerContext * s_workerTable[MAX_WORKER_COUNT];
 static TWorkerId s_ownNodeId = WORKER_ID_INVALID;
 
@@ -28,33 +39,48 @@ void WorkerTableInit(TWorkerId nodeId) {
     /* Take into account per-core application private data - align with cache line */
     size_t entrySize = ENV_CACHE_LINE_SIZE_ROUNDUP(sizeof(SWorkerContext) + cores * sizeof(void *));
     size_t tableSize = entrySize * MAX_WORKER_COUNT;
+    size_t idFifoSize = ENV_CACHE_LINE_SIZE_ROUNDUP(sizeof(SDynamicIdFifo));
+    size_t totalAllocationSize = idFifoSize + tableSize;
     LogPrint(ELogSeverityLevel_Info, \
-        "Creating worker table in shared memory - max workers: %d, entry size: %ld, table size: %ld...", \
-        MAX_WORKER_COUNT, entrySize, tableSize);
+        "Creating worker table in shared memory - max workers: %d, entry size: %ld, table size: %ld, ID fifo size: %ld, total: %ld...", \
+        MAX_WORKER_COUNT, entrySize, tableSize, idFifoSize, totalAllocationSize);
 
     /* Do one big allocation and then set up the pointers to reference parts of it */
-    void * tableBase = env_shared_malloc(tableSize);
-    AssertTrue(tableBase != NULL);
+    void * startAddr = env_shared_malloc(totalAllocationSize);
+    AssertTrue(startAddr != NULL);
 
-    /* Set up the pointers and initialize the entries */
+    /* Initialize the dynamic ID FIFO */
+    s_idFifo = (SDynamicIdFifo *) startAddr;
+    s_idFifo->GetIndex = 0;
+    s_idFifo->PutIndex = 0;
+    s_idFifo->FreeIds = DYNAMIC_WORKER_IDS_COUNT;
+    SpinlockInit(&s_idFifo->Lock);
+    for (TWorkerId i = 0; i < DYNAMIC_WORKER_IDS_COUNT; i++) {
+
+        s_idFifo->IdPool[i] = WORKER_ID_DYNAMIC_BASE + i;
+    }
+
+    void * tableBase = (u8 *) startAddr + idFifoSize;
+    /* Set up the pointers and initialize the table entries */
     for (TWorkerId i = 0; i < MAX_WORKER_COUNT; i++) {
 
         s_workerTable[i] = (SWorkerContext *)((u8*) tableBase + i * entrySize);
-        env_spinlock_init(&s_workerTable[i]->Lock);
+        SpinlockInit(&s_workerTable[i]->Lock);
         ResetContext(s_workerTable[i]);
     }
 }
 
 void WorkerTableTeardown(void) {
 
-    void * tableBase = s_workerTable[0];
+    /* Recover the start address of the shared memory */
+    void * startAddr = s_idFifo;
     for (TWorkerId i = 0; i < MAX_WORKER_COUNT; i++) {
 
         /* Unset all the pointers */
         s_workerTable[i] = NULL;
     }
     /* Free the shared memory */
-    env_shared_free(tableBase);
+    env_shared_free(startAddr);
 }
 
 SWorkerContext * ReserveWorkerContext(TWorkerId workerId) {
@@ -63,29 +89,21 @@ SWorkerContext * ReserveWorkerContext(TWorkerId workerId) {
 
         /* Dynamic ID allocation */
 
-        for (TWorkerId id = WORKER_ID_DYNAMIC_BASE; id < MAX_WORKER_COUNT; id++) {
+        TWorkerId dynamicId = AllocateDynamicLocalId();
 
-            /* Find free slot */
-            if (s_workerTable[id]->State == EWorkerState_Inactive) {
+        if (unlikely(dynamicId == WORKER_ID_INVALID)) {
 
-                /* Lock the entry and retest the state */
-                LockWorkerTableEntry(id);
-                if (s_workerTable[id]->State == EWorkerState_Inactive) {
-
-                    /* Free slot found, reserve it */
-                    s_workerTable[id]->State = EWorkerState_Deploying;
-                    s_workerTable[id]->WorkerId = MakeWorkerId(GetOwnNodeId(), id);
-                    UnlockWorkerTableEntry(id);
-                    return s_workerTable[id];
-                }
-
-                /* Contention with another registration, continue looking */
-                UnlockWorkerTableEntry(id);
-            }
+            LogPrint(ELogSeverityLevel_Critical, "No free worker IDs found!");
+            return NULL;
         }
 
-        LogPrint(ELogSeverityLevel_Critical, "No free worker IDs found!");
-        return NULL;
+        LockWorkerTableEntry(dynamicId);
+        /* Assert consistency between the worker table and the dynamic ID FIFO */
+        AssertTrue(s_workerTable[dynamicId]->State == EWorkerState_Inactive);
+        s_workerTable[dynamicId]->State = EWorkerState_Deploying;
+        s_workerTable[dynamicId]->WorkerId = MakeWorkerId(GetOwnNodeId(), dynamicId);
+        UnlockWorkerTableEntry(dynamicId);
+        return s_workerTable[dynamicId];
 
     } else {
 
@@ -96,7 +114,8 @@ SWorkerContext * ReserveWorkerContext(TWorkerId workerId) {
             "Requested invalid worker ID: 0x%x", workerId);
 
         FAIL_RESERVE_IF(localId >= WORKER_ID_DYNAMIC_BASE, Warning, \
-            "Requested worker ID in the dynamic range: 0x%x", workerId);
+            "Requested worker ID 0x%x in the dynamic range: 0x%x-0x%x", \
+            workerId, WORKER_ID_DYNAMIC_BASE, MAX_WORKER_COUNT - 1);
 
         LockWorkerTableEntry(workerId);
         if (s_workerTable[localId]->State != EWorkerState_Inactive) {
@@ -125,6 +144,10 @@ void ReleaseWorkerContext(TWorkerId workerId) {
      * not allowed to prevent any race conditions */
     AssertTrue(s_workerTable[localId]->State != EWorkerState_Active);
     ResetContext(s_workerTable[localId]);
+    if (localId >= WORKER_ID_DYNAMIC_BASE) {
+        /* Recycle dynamic local ID */
+        ReleaseDynamicLocalId(localId);
+    }
     UnlockWorkerTableEntry(workerId);
 }
 
@@ -165,7 +188,7 @@ void LockWorkerTableEntry(TWorkerId workerId) {
     /* Use the local part to index the table */
     TWorkerId localId = WorkerIdGetLocal(workerId);
     AssertTrue(localId < MAX_WORKER_COUNT);
-    env_spinlock_lock(&s_workerTable[localId]->Lock);
+    SpinlockAcquire(&s_workerTable[localId]->Lock);
 }
 
 void UnlockWorkerTableEntry(TWorkerId workerId) {
@@ -173,7 +196,7 @@ void UnlockWorkerTableEntry(TWorkerId workerId) {
     /* Use the local part to index the table */
     TWorkerId localId = WorkerIdGetLocal(workerId);
     AssertTrue(localId < MAX_WORKER_COUNT);
-    env_spinlock_unlock(&s_workerTable[localId]->Lock);
+    SpinlockRelease(&s_workerTable[localId]->Lock);
 }
 
 TWorkerId GetOwnNodeId(void) {
@@ -215,4 +238,33 @@ static void ResetContext(SWorkerContext * context) {
 
         context->MessageBuffer[i] = MESSAGE_INVALID;
     }
+}
+
+static inline TWorkerId AllocateDynamicLocalId(void) {
+
+    TWorkerId id = WORKER_ID_INVALID;
+    SpinlockAcquire(&s_idFifo->Lock);
+    if (s_idFifo->FreeIds > 0) {
+
+        AssertTrue(s_idFifo->IdPool[s_idFifo->GetIndex] != WORKER_ID_INVALID);
+        id = s_idFifo->IdPool[s_idFifo->GetIndex];
+        /* Explicitly poison the allocated entry to detect any errors */
+        s_idFifo->IdPool[s_idFifo->GetIndex] = WORKER_ID_INVALID;
+        /* Move the allocation index */
+        s_idFifo->GetIndex = (s_idFifo->GetIndex + 1) % DYNAMIC_WORKER_IDS_COUNT;
+        s_idFifo->FreeIds--;
+    }
+    SpinlockRelease(&s_idFifo->Lock);
+    return id;
+}
+
+static inline void ReleaseDynamicLocalId(TWorkerId localId) {
+
+    AssertTrue(0 == WorkerIdGetNode(localId));
+    SpinlockAcquire(&s_idFifo->Lock);
+    AssertTrue(s_idFifo->IdPool[s_idFifo->PutIndex] == WORKER_ID_INVALID);
+    s_idFifo->IdPool[s_idFifo->PutIndex] = localId;
+    s_idFifo->PutIndex = (s_idFifo->PutIndex + 1) % DYNAMIC_WORKER_IDS_COUNT;
+    s_idFifo->FreeIds++;
+    SpinlockRelease(&s_idFifo->Lock);
 }

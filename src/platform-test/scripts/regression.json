@@ -2,11 +2,13 @@
     "cases": [
         { "name": "TestBasicTiming", "params": { "subcase": 0 } },
         { "name": "TestBasicTiming", "params": { "subcase": 1 } },
+        { "name": "TestBasicTiming", "params": { "subcase": 2 } },
         { "name": "TestBasicWorkers", "params": { "subcase": 0 } },
         { "name": "TestBasicWorkers", "params": { "subcase": 1 } },
         { "name": "TestBasicWorkers", "params": { "subcase": 2 } },
         { "name": "TestBasicWorkers", "params": { "subcase": 3 } },
         { "name": "TestBasicWorkers", "params": { "subcase": 4 } },
+        { "name": "TestBasicWorkers", "params": { "subcase": 5 } },
         { "name": "TestMessageBuffering", "params": { "overload": 20 } },
         { "name": "TestParallelism", "params": { "workers": 12, "rounds": 128, "loops": 4096, "useAtomics": true, "useSpinlock": false } },
         { "name": "TestParallelism", "params": { "workers": 12, "rounds": 128, "loops": 4096, "useAtomics": false, "useSpinlock": true } },

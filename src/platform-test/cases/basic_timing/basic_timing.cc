@@ -56,6 +56,9 @@ int TestBasicTiming::StartTest(void * args) {
     case 1:
         return RunSubcase1();
 
+    case 2:
+        return RunSubcase2();
+
     default:
         LogPrint(ELogSeverityLevel_Warning, "Invalid subcase %d for test case '%s'", \
             params->Subcase, this->GetName());
@@ -175,6 +178,66 @@ int TestBasicTiming::RunSubcase1(void) {
     DestroyTimer(timerId);
     /* Pass the test synchronously */
     TestRunner::ReportTestResult(TestCase::Result::Success);
+    return 0;
+}
+
+int TestBasicTiming::RunSubcase2(void) {
+
+    /* Create and destroy a timer */
+    TTimerId startTimerId = CreateTimer("Subcase2Timer");
+    if (unlikely(startTimerId == TIMER_ID_INVALID)) {
+
+        LogPrint(ELogSeverityLevel_Error, "Failed to create the reference timer");
+        return -1;
+    }
+    DestroyTimer(startTimerId);
+
+    /* Create another timer and make sure the old ID was not reused */
+    TTimerId timerId = CreateTimer("Subcase2Timer");
+    if (unlikely(timerId == TIMER_ID_INVALID)) {
+
+        LogPrint(ELogSeverityLevel_Error, "Failed to create the second timer");
+        return -1;
+    }
+    DestroyTimer(timerId);
+
+    if (timerId == startTimerId) {
+
+        LogPrint(ELogSeverityLevel_Error, "Timer ID 0x%x got immediately reused in test case '%s'", \
+            timerId, this->GetName());
+        /* Report failure and return 0 to indicate that the test has started successfully */
+        TestRunner::ReportTestResult(TestCase::Result::Failure, "Timer ID 0x%x got immediately reused", \
+            timerId);
+        return 0;
+    }
+
+    /* Try allocating timers until the original ID gets reused (note that the test assumes no
+     * applications are running in the background that could allocate a timer and "steal" the
+     * ID we are looking for */
+    for (u32 i = 0; i < MAX_TIMER_COUNT; i++) {
+
+        timerId = CreateTimer("Subcase2Timer");
+        if (unlikely(timerId == TIMER_ID_INVALID)) {
+
+            LogPrint(ELogSeverityLevel_Error, "Failed to create timer at i=%d in test case '%s'", \
+                i, this->GetName());
+            return -1;
+        }
+        DestroyTimer(timerId);
+
+        if (timerId == startTimerId) {
+
+            LogPrint(ELogSeverityLevel_Info, "Timer ID 0x%x reused after %d allocations", \
+                timerId, i + 1);
+            TestRunner::ReportTestResult(TestCase::Result::Success, \
+                "Timer ID 0x%x reused after %d allocations", timerId, i + 1);
+            return 0;
+        }
+    }
+
+    /* Report failure and return 0 to indicate that the test has started successfully */
+    TestRunner::ReportTestResult(TestCase::Result::Failure, \
+        "Timer ID 0x%x never got reused", startTimerId);
     return 0;
 }
 

@@ -15,6 +15,7 @@ public:
 private:
     int RunSubcase0(void);
     int RunSubcase1(void);
+    int RunSubcase2(void);
 };
 
 #endif /* PLATFORM_TEST_CASES_BASIC_TIMING_BASIC_TIMING_HH */
