@@ -69,15 +69,15 @@ static em_pool_t CreatePacketPool(u32 bufCount) {
 
     em_pool_cfg_t emPoolConfig;
     /* Create the packet pool as EM pool */
-	em_pool_cfg_init(&emPoolConfig);
-	emPoolConfig.event_type = EM_EVENT_TYPE_PACKET;
-	emPoolConfig.num_subpools = 1;
-	emPoolConfig.subpool[0].size = PKTIO_POOL_BUF_SIZE;
-	emPoolConfig.subpool[0].num = bufCount;
-	/* Use max thread-local cache to speed up pktio allocations */
-	emPoolConfig.subpool[0].cache_size = odpPoolCapa.pkt.max_cache_size;
+    em_pool_cfg_init(&emPoolConfig);
+    emPoolConfig.event_type = EM_EVENT_TYPE_PACKET;
+    emPoolConfig.num_subpools = 1;
+    emPoolConfig.subpool[0].size = PKTIO_POOL_BUF_SIZE;
+    emPoolConfig.subpool[0].num = bufCount;
+    /* Use max thread-local cache to speed up pktio allocations */
+    emPoolConfig.subpool[0].cache_size = odpPoolCapa.pkt.max_cache_size;
 
-	em_pool_t emPool = em_pool_create("pktio_pool", NETWORKING_PACKET_POOL, &emPoolConfig);
+    em_pool_t emPool = em_pool_create("pktio_pool", NETWORKING_PACKET_POOL, &emPoolConfig);
     AssertTrue(emPool != EM_POOL_UNDEF);
     return emPool;
 }

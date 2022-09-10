@@ -16,6 +16,7 @@ struct TestParallelismParams {
     u32 LoopsPerRound;
     bool UseAtomics;
     bool UseSpinlock;
+    bool UseParallelWorkers;
 };
 
 struct TestSharedData {
@@ -37,7 +38,8 @@ struct TestSharedData {
 
 struct TestWorkerData {
     TestSharedData * SharedData;
-    TSpinlock LocalSpinlock;
+    TSpinlock PrivateSpinlock;
+    TAtomic64 OngoingAccesses;
     u32 RoundsRemaining;
 };
 
@@ -64,6 +66,7 @@ int TestParallelism::ParseParams(char * paramsIn, void * paramsOut) {
     paramsLayout["loops"] = ParamsParser::StructField(offsetof(TestParallelismParams, LoopsPerRound), sizeof(u32), ParamsParser::FieldType::U32);
     paramsLayout["useAtomics"] = ParamsParser::StructField(offsetof(TestParallelismParams, UseAtomics), sizeof(bool), ParamsParser::FieldType::Boolean);
     paramsLayout["useSpinlock"] = ParamsParser::StructField(offsetof(TestParallelismParams, UseSpinlock), sizeof(bool), ParamsParser::FieldType::Boolean);
+    paramsLayout["useParallelWorkers"] = ParamsParser::StructField(offsetof(TestParallelismParams, UseParallelWorkers), sizeof(bool), ParamsParser::FieldType::Boolean);
 
     return ParamsParser::Parse(paramsIn, paramsOut, std::move(paramsLayout));
 }
@@ -106,11 +109,11 @@ int TestParallelism::StartTest(void * args) {
         params->WorkerCount);
     /* Deploy the workers */
     SWorkerConfig workerConfig = {
-        .Name = "ParallelWorker",
+        .Name = "ParallelismTester",
         .WorkerId = WORKER_ID_INVALID,
         /* Let the same worker execute on multiple cores at the same time */
         .CoreMask = GetAllCoresMask(),
-        .Parallel = true,
+        .Parallel = params->UseParallelWorkers,
         .UserInit = WorkerInit,
         .UserExit = WorkerExit,
         .WorkerBody = WorkerBody
@@ -137,7 +140,10 @@ int TestParallelism::StartTest(void * args) {
 
         /* Initialize per-worker spinlock used to serialize access to
          * the worker's private counters */
-        SpinlockInit(&workerPrivateData->LocalSpinlock);
+        SpinlockInit(&workerPrivateData->PrivateSpinlock);
+        /* Initialize per-worker counter used to synchronize reporting
+         * to the test runner */
+        Atomic64Init(&workerPrivateData->OngoingAccesses);
         /* Initialize the number of rounds until end of test */
         workerPrivateData->RoundsRemaining = params->RoundsPerWorker;
         /* Save a reference to the shared memory - the worker will
@@ -252,27 +258,71 @@ static void WorkerBody(TMessage message) {
 
     TestWorkerData * data = static_cast<TestWorkerData *>(GetSharedData());
 
-    /* Access the memory according to the test conditions */
-    for (u32 i = 0; i < data->SharedData->LoopsPerRound; i++) {
-
-        TouchData();
-    }
-
-    SpinlockAcquire(&data->LocalSpinlock);
+    /* Acquire a spinlock before accessing the RoundsRemaining field */
+    SpinlockAcquire(&data->PrivateSpinlock);
     if (data->RoundsRemaining > 1) {
 
         data->RoundsRemaining--;
-        /* Resend the message back to self */
+
+        /* We are about to make shared memory access - increment the
+         * ongoing accesses counter before releasing the lock */
+        Atomic64Inc(&data->OngoingAccesses);
+        SpinlockRelease(&data->PrivateSpinlock);
+
+        /* Resend the message back to self immediately */
         SendMessage(message, GetOwnWorkerId());
+
+        /* Access the memory according to the test conditions */
+        for (u32 i = 0; i < data->SharedData->LoopsPerRound; i++) {
+
+            TouchData();
+        }
+
+        /* Allow another instance of an atomic worker to be scheduled in parallel -
+         * this way we can test that EM's atomic processing works as expected and
+         * serves as an alternative mean of synchronization */
+        LeaveCriticalSection();
+
+        /* Current execution path is done accessing the memory under test
+         * - decrement the counter */
+        Atomic64Dec(&data->OngoingAccesses);
 
     } else if (data->RoundsRemaining == 1) {
 
-        /* Last round - end of the test for the current worker - our work here is done */
+        /* Last round - do the memory access and finish the test on the current worker */
+
+        data->RoundsRemaining--;
+        /* Note that we could increment the ongoing accesses counter here, but we don't
+         * need to since no other instance of the current worker can be executing this
+         * code in parallel and it is only here that we are checking the counter */
+        SpinlockRelease(&data->PrivateSpinlock);
+
+        /* Finally destroy the message */
         DestroyMessage(message);
 
+        /* Access the memory according to the test conditions */
+        for (u32 i = 0; i < data->SharedData->LoopsPerRound; i++) {
+
+            TouchData();
+        }
+
+        /* We do not call LeaveCriticalSection at this point since this is the last time
+         * an atomic worker will make access to the shared memory */
+
+        /* The worker may be parallel, so before declaring our job done wait for
+         * any parallel executions to complete */
+        while (Atomic64Get(&data->OngoingAccesses) > 0) {
+            ;
+        }
+
+        /* Check if we are the last worker to terminate - only the last worker
+         * reports the result to the test runner */
         if (Atomic64SubReturn(&data->SharedData->WorkersRemaining, 1) == 0) {
 
-            /* All other workers have terminated, check the result */
+            /* If we are here, then all other workers have definitely terminated as
+             * well as other copies (execution paths) of the current worker */
+
+            /* Check the result */
             u64 counterValue = ReadFinalCounterValue();
             if (counterValue == data->SharedData->ExpectedValue) {
 
@@ -287,18 +337,13 @@ static void WorkerBody(TMessage message) {
                     counterValue, data->SharedData->ExpectedValue);
             }
         }
-        TerminateWorker(WORKER_ID_INVALID);
-        /* Note that TerminateWorker returns and the worker continues to release the spinlock
-         * - no deadlock may occur */
 
     } else {
 
-        /* RoundRemaining == 0, destroy the message and quit (termination has been or will be
-         * requested in parallel on a different core) */
+        /* Zero rounds remaining - destroy the message and wait for termination */
+        SpinlockRelease(&data->PrivateSpinlock);
         DestroyMessage(message);
     }
-
-    SpinlockRelease(&data->LocalSpinlock);
 }
 
 static void TouchData(void){
