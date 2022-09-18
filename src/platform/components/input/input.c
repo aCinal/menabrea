@@ -2,6 +2,7 @@
 #include <menabrea/input.h>
 #include <menabrea/common.h>
 #include <menabrea/log.h>
+#include <menabrea/exception.h>
 
 #define MAX_INPUT_CALLBACKS  16
 
@@ -20,6 +21,18 @@ static bool s_inInputPollCallback = false;
 static int s_totalEventsEnqueued = 0;
 
 void RegisterInputPolling(TInputPollCallback callback, int coreMask) {
+
+    if (unlikely(callback == NULL)) {
+
+        RaiseException(EExceptionFatality_NonFatal, "Passed NULL pointer for input callback");
+        return;
+    }
+
+    if (unlikely(coreMask == 0)) {
+
+        RaiseException(EExceptionFatality_NonFatal, "Empty core mask for callback %p", callback);
+        return;
+    }
 
     if (s_numOfCallbacks < MAX_INPUT_CALLBACKS) {
 

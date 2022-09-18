@@ -91,7 +91,7 @@ SStartupParams * ParseCommandLine(int argc, char **argv) {
 
         default:
             /* Should never get here */
-            RaiseException(EExceptionFatality_Fatal, 0, \
+            RaiseException(EExceptionFatality_Fatal, \
                 "getopt_long() returned unexpected optionIndex: %d", optionIndex);
             break;
         }

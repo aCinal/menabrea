@@ -17,11 +17,25 @@ static void WorkerEoReceive(void * eoCtx, em_event_t event, em_event_type_t type
 
 TWorkerId DeployWorker(const SWorkerConfig * config) {
 
-    AssertTrue(config != NULL);
+    if (unlikely(config == NULL)) {
+
+        RaiseException(EExceptionFatality_NonFatal, \
+            "Passed NULL pointer for worker config");
+        return WORKER_ID_INVALID;
+    }
+
+    if (unlikely(config->Name == NULL)) {
+
+        RaiseException(EExceptionFatality_NonFatal, \
+            "Passed NULL pointer for worker name");
+        return WORKER_ID_INVALID;
+    }
+
     if (unlikely(config->WorkerBody == NULL)) {
 
-        LogPrint(ELogSeverityLevel_Warning, "%s(): Attempted to register worker '%s' without a body function", \
-            __FUNCTION__, config->Name);
+        RaiseException(EExceptionFatality_NonFatal, \
+            "Passed NULL pointer for body function of worker '%s'", \
+            config->Name);
         return WORKER_ID_INVALID;
     }
 
@@ -144,8 +158,8 @@ void TerminateWorker(TWorkerId workerId) {
 
     if (WorkerIdGetNode(realId) != GetOwnNodeId()) {
 
-        LogPrint(ELogSeverityLevel_Warning, "%s(): Attempted to terminate remote worker 0x%x", \
-            __FUNCTION__, workerId);
+        RaiseException(EExceptionFatality_NonFatal, "Attempted to terminate remote worker 0x%x", \
+            workerId);
         return;
     }
 
@@ -293,9 +307,12 @@ static em_status_t WorkerEoStart(void * eoCtx, em_eo_t eo, const em_eo_conf_t * 
 
     if (context->UserInit) {
 
-        /* Call user-provided initialization function (note that the shared data field is
-         * used during worker startup to pass the init argument) */
-        int userStatus = context->UserInit(context->SharedData);
+        /* Recover the init argument from the shared data field */
+        void * initArg = context->SharedData;
+        /* No user code has been run yet, we can safely clear the shared data field */
+        context->SharedData = NULL;
+        /* Call user-provided initialization function */
+        int userStatus = context->UserInit(initArg);
         if (userStatus) {
 
             LogPrint(ELogSeverityLevel_Warning, \

@@ -336,8 +336,8 @@ static inline SChildren * ForkChildDispatchers(void) {
             break;
 
         case -1:
-            RaiseException(EExceptionFatality_Fatal, errno, "Failed to fork child dispatcher %d: %s", \
-                i, strerror(errno));
+            RaiseException(EExceptionFatality_Fatal, "Failed to fork child dispatcher %d: %s (%d)", \
+                i, strerror(errno), errno);
             break;
 
         default:

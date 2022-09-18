@@ -14,7 +14,14 @@ namespace TestRunner {
 
 #define REPORT_GOOD(fmt, ...)                  IpcSocket::WriteBack("[+] " fmt, ##__VA_ARGS__)
 #define REPORT_BAD(fmt, ...)                   IpcSocket::WriteBack("[-] " fmt, ##__VA_ARGS__)
-#define REPORT_TEST_CASE_SUCCESS(name)         REPORT_GOOD("Test case '%s' -- PASSED", (name))
+#define REPORT_TEST_CASE_SUCCESS(name, extra) { \
+    int __cmp = strcmp((extra), " "); \
+    REPORT_GOOD("Test case '%s' -- PASSED%s%s%s", \
+        (name), \
+        __cmp ? " (" : "", \
+        __cmp ? (extra) : "", \
+        __cmp ? ")" : ""); \
+}
 #define REPORT_TEST_CASE_FAILURE(name, extra)  REPORT_BAD("Test case '%s' -- FAILED (%s)", (name), (extra))
 
 enum class State {
@@ -122,6 +129,7 @@ void ReportTestResult(TestCase::Result result) {
 
 void ReportTestResult(TestCase::Result result, const char * extra, ...) {
 
+    AssertTrue(extra != nullptr);
     /* Create a timeout message */
     TMessage timeoutMessage = CreateMessage(TEST_RESULT_MSG_ID, sizeof(STestResult));
     /* Don't leave the system in an inconsistent state - crash immediately if report
@@ -256,6 +264,7 @@ static void HandleCommandRun(const char * testCaseName, char * testArgsString) {
     (void) strncpy(payload->Extra, "Test execution timed out", sizeof(payload->Extra));
     payload->Extra[sizeof(payload->Extra) - 1] = '\0';
     payload->TestRunId = CurrentTestRunId();
+    payload->Core = GetCurrentCore();
 
     AssertTrue(s_listenerId != WORKER_ID_INVALID);
     /* Arm the timer */
@@ -343,7 +352,7 @@ static void HandleTestResult(TMessage message) {
 
     /* Report result via UDS */
     if (payload->Result == TestCase::Result::Success) {
-        REPORT_TEST_CASE_SUCCESS(s_currentTestCase->GetName());
+        REPORT_TEST_CASE_SUCCESS(s_currentTestCase->GetName(), payload->Extra);
     } else {
         REPORT_TEST_CASE_FAILURE(s_currentTestCase->GetName(), payload->Extra);
     }

@@ -19,6 +19,9 @@ private:
     int RunSubcase3(void);
     int RunSubcase4(void);
     int RunSubcase5(void);
+    int RunSubcase6(void);
+    int RunSubcase7(void);
+    int RunSubcase8(void);
 };
 
 #endif /* PLATFORM_TEST_CASES_BASIC_WORKERS_BASIC_WORKERS_HH */

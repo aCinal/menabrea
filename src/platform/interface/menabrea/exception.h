@@ -28,24 +28,22 @@ typedef enum EExceptionFatality {
  * @param file Path to the source file where the exception is being raised
  * @param line Line in the code where the exception is being raised
  * @param function Name of the function which is raising the exception
- * @param code User-defined code, e.g. errno
  * @param message printf-like format string for the user message
  * @param ... Format arguments
  * @warning Do not use this directly, use RaiseException macro instead
  * @see RaiseException, EExceptionFatality
  */
-void RaiseExceptionImpl(EExceptionFatality fatality, const char * file, int line, const char * function, int code,
-    const char * message, ...) __attribute__((format(printf, 6, 7)));
+void RaiseExceptionImpl(EExceptionFatality fatality, const char * file, int line, const char * function,
+    const char * message, ...) __attribute__((format(printf, 5, 6)));
 
 /**
  * @brief Convenience macro wrapper around RaiseExceptionImpl
  * @param fatality Exception fatality
- * @param code User-defined code, e.g. errno
  * @param message printf-like format string for the user message
  * @param ... Format string arguments
  * @see RaiseExceptionImpl
  */
-#define RaiseException(fatality, code, message, ...) RaiseExceptionImpl((fatality), __FILE__, __LINE__, __FUNCTION__, (code), message, ##__VA_ARGS__)
+#define RaiseException(fatality, message, ...) RaiseExceptionImpl((fatality), __FILE__, __LINE__, __FUNCTION__, message, ##__VA_ARGS__)
 
 /**
  * @brief Assert that an expression is true, raise fatal exception otherwise
@@ -53,7 +51,7 @@ void RaiseExceptionImpl(EExceptionFatality fatality, const char * file, int line
  */
 #define AssertTrue(expr) \
     if (unlikely(!(expr))) { \
-        RaiseException(EExceptionFatality_Fatal, 0, "Assertion failed: " #expr ); \
+        RaiseException(EExceptionFatality_Fatal, "Assertion failed: " #expr ); \
     }
 
 #ifdef __cplusplus

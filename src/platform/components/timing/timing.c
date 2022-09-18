@@ -13,6 +13,12 @@ static inline void ChangeStateFromArmedToIdle(STimerContext * context);
 
 TTimerId CreateTimer(const char * name) {
 
+    if (unlikely(name == NULL)) {
+
+        RaiseException(EExceptionFatality_NonFatal, "Passed NULL pointer for timer name");
+        return TIMER_ID_INVALID;
+    }
+
     /* Reserve the context */
     STimerContext * context = ReserveTimerContext();
     if (unlikely(context == NULL)) {
@@ -48,9 +54,24 @@ TTimerId CreateTimer(const char * name) {
 
 TTimerId ArmTimer(TTimerId timerId, u64 expires, u64 period, TMessage message, TWorkerId receiver) {
 
-    char timerName[MAX_TIMER_NAME_LEN];
+    if (unlikely(timerId >= MAX_TIMER_COUNT)) {
+
+        RaiseException(EExceptionFatality_NonFatal, "Timer ID 0x%x out of range", \
+            timerId);
+        return TIMER_ID_INVALID;
+    }
+
+    if (unlikely(MESSAGE_INVALID == message)) {
+
+        RaiseException(EExceptionFatality_NonFatal, "Tried arming timer 0x%x with invalid message", \
+            timerId);
+        return TIMER_ID_INVALID;
+    }
+
     LockTimerTableEntry(timerId);
     STimerContext * context = FetchTimerContext(timerId);
+
+    char timerName[MAX_TIMER_NAME_LEN];
     (void) strcpy(timerName, context->Name);
 
     /* Check timer state */
@@ -58,8 +79,8 @@ TTimerId ArmTimer(TTimerId timerId, u64 expires, u64 period, TMessage message, T
     if (state != ETimerState_Idle) {
 
         UnlockTimerTableEntry(timerId);
-        LogPrint(ELogSeverityLevel_Warning, "%s(): Timer '%s' (0x%x) in invalid state: %d (message ID: 0x%x, receiver: 0x%x)", \
-            __FUNCTION__, timerName, timerId, state, GetMessageId(message), receiver);
+        RaiseException(EExceptionFatality_NonFatal, "Timer '%s' (0x%x) in invalid state: %d (message ID: 0x%x, receiver: 0x%x)", \
+            timerName, timerId, state, GetMessageId(message), receiver);
         return TIMER_ID_INVALID;
     }
 
@@ -110,11 +131,17 @@ TTimerId ArmTimer(TTimerId timerId, u64 expires, u64 period, TMessage message, T
 
 TTimerId DisarmTimer(TTimerId timerId) {
 
-    char timerName[MAX_TIMER_NAME_LEN];
-    LockTimerTableEntry(timerId);
+    if (unlikely(timerId >= MAX_TIMER_COUNT)) {
 
+        RaiseException(EExceptionFatality_NonFatal, "Timer ID 0x%x out of range", \
+            timerId);
+        return TIMER_ID_INVALID;
+    }
+
+    LockTimerTableEntry(timerId);
     STimerContext * context = FetchTimerContext(timerId);
 
+    char timerName[MAX_TIMER_NAME_LEN];
     (void) strcpy(timerName, context->Name);
     em_tmo_t tmo = context->Tmo;
     ETimerState state = context->State;
@@ -166,8 +193,8 @@ TTimerId DisarmTimer(TTimerId timerId) {
             /* Timer framework error */
 
             UnlockTimerTableEntry(timerId);
-            RaiseException(EExceptionFatality_Fatal, status, "%s(): em_tmo_cancel() failed for timer '%s' (0x%x)", \
-                __FUNCTION__, timerName, timerId);
+            RaiseException(EExceptionFatality_Fatal, "%s(): em_tmo_cancel() returned %d for timer '%s' (0x%x)", \
+                __FUNCTION__, status, timerName, timerId);
             break;
         }
         return timerId;
@@ -189,26 +216,33 @@ TTimerId DisarmTimer(TTimerId timerId) {
         /* Timer in invalid state */
 
         UnlockTimerTableEntry(timerId);
-        LogPrint(ELogSeverityLevel_Warning, "%s(): Timer '%s' (0x%x) in invalid state: %d", \
-            __FUNCTION__, timerName, timerId, state);
+        RaiseException(EExceptionFatality_NonFatal, "Timer '%s' (0x%x) in invalid state: %d", \
+            timerName, timerId, state);
         return TIMER_ID_INVALID;
     }
 }
 
 void DestroyTimer(TTimerId timerId) {
 
-    char timerName[MAX_TIMER_NAME_LEN];
+    if (unlikely(timerId >= MAX_TIMER_COUNT)) {
+
+        RaiseException(EExceptionFatality_NonFatal, "Timer ID 0x%x out of range", \
+            timerId);
+        return;
+    }
 
     LockTimerTableEntry(timerId);
     STimerContext * context = FetchTimerContext(timerId);
+
+    char timerName[MAX_TIMER_NAME_LEN];
     (void) strcpy(timerName, context->Name);
 
     ETimerState state = context->State;
     if (state != ETimerState_Idle) {
 
         UnlockTimerTableEntry(timerId);
-        LogPrint(ELogSeverityLevel_Warning, "%s(): Timer '%s' (0x%x) in invalid state: %d", \
-            __FUNCTION__, timerName, timerId, state);
+        RaiseException(EExceptionFatality_NonFatal, "Timer '%s' (0x%x) in invalid state: %d", \
+            timerName, timerId, state);
         return;
     }
 

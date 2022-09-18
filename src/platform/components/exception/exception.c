@@ -5,14 +5,14 @@
 #include <stdarg.h>
 #include <signal.h>
 
-void RaiseExceptionImpl(EExceptionFatality fatality, const char * file, int line, const char * function, int code,
+void RaiseExceptionImpl(EExceptionFatality fatality, const char * file, int line, const char * function,
     const char * message, ...) {
 
     va_list ap;
     va_start(ap, message);
     /* Print common header */
-    LogPrint(ELogSeverityLevel_Error, "%s EXCEPTION RAISED from %s:%d %s() with code %d", \
-        fatality == EExceptionFatality_Fatal ? "FATAL" : "NON-FATAL", file, line, function, code);
+    LogPrint(ELogSeverityLevel_Error, "%s EXCEPTION RAISED from %s:%d %s", \
+        fatality == EExceptionFatality_Fatal ? "FATAL" : "NON-FATAL", file, line, function);
     /* Print user message */
     LogPrintV(ELogSeverityLevel_Error, message, ap);
     va_end(ap);

@@ -36,6 +36,7 @@ void LogPrintV(ELogSeverityLevel severity, const char * format, va_list args) {
 
     /* Do plain libc assert here to avoid a circular dependency */
     assert(ELogSeverityLevel_NumberOf > severity);
+    assert(format != NULL);
 
     if (severity == ELogSeverityLevel_Debug && !s_verbose) {
 

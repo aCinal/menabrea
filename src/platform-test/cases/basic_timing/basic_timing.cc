@@ -59,6 +59,21 @@ int TestBasicTiming::StartTest(void * args) {
     case 2:
         return RunSubcase2();
 
+    case 3:
+        return RunSubcase3();
+
+    case 4:
+        return RunSubcase4();
+
+    case 5:
+        return RunSubcase5();
+
+    case 6:
+        return RunSubcase6();
+
+    case 7:
+        return RunSubcase7();
+
     default:
         LogPrint(ELogSeverityLevel_Warning, "Invalid subcase %d for test case '%s'", \
             params->Subcase, this->GetName());
@@ -238,6 +253,106 @@ int TestBasicTiming::RunSubcase2(void) {
     /* Report failure and return 0 to indicate that the test has started successfully */
     TestRunner::ReportTestResult(TestCase::Result::Failure, \
         "Timer ID 0x%x never got reused", startTimerId);
+    return 0;
+}
+
+int TestBasicTiming::RunSubcase3(void) {
+
+    /* Obtain a valid message */
+    TMessage message = CreateMessage(0xDEAD, 0);
+    if (unlikely(message == MESSAGE_INVALID)) {
+
+        LogPrint(ELogSeverityLevel_Error, "Failed to create a dummy message in subcase 3 of test case '%s'", \
+            this->GetName());
+        return -1;
+    }
+
+    /* Call ArmTimer with timer ID out of range */
+    TTimerId ret = ArmTimer(MAX_TIMER_COUNT, 1000, 1000, message, 0x1234);
+    if (unlikely(ret != TIMER_ID_INVALID)) {
+
+        LogPrint(ELogSeverityLevel_Error, "Unexpectedly succeeded at arming timer with ID out of range. ArmTimer returned %d", \
+            ret);
+        TestRunner::ReportTestResult(TestCase::Result::Failure, \
+            "Unexpectedly succeeded at arming timer with ID out of range");
+        return 0;
+    }
+
+    DestroyMessage(message);
+    TestRunner::ReportTestResult(TestCase::Result::Success);
+    return 0;
+}
+
+int TestBasicTiming::RunSubcase4(void) {
+
+    /* Create a valid timer */
+    TTimerId timerId = CreateTimer("subcase4timer");
+    if (unlikely(timerId == TIMER_ID_INVALID)) {
+
+        LogPrint(ELogSeverityLevel_Error, "Failed to create a timer for subcase 4 in test case '%s'", this->GetName());
+        return -1;
+    }
+
+    /* Call ArmTimer with MESSAGE_INVALID */
+    TTimerId ret = ArmTimer(timerId, 1000, 1000, MESSAGE_INVALID, 0x1234);
+    if (unlikely(ret != TIMER_ID_INVALID)) {
+
+        (void) DisarmTimer(timerId);
+        LogPrint(ELogSeverityLevel_Error, "Unexpectedly succeeded at arming timer 0x%x with invalid message. ArmTimer returned %d", \
+            timerId, ret);
+        TestRunner::ReportTestResult(TestCase::Result::Failure, \
+            "Unexpectedly succeeded at arming timer 0x%x with invalid message", timerId);
+        return 0;
+    }
+
+    DestroyTimer(timerId);
+    TestRunner::ReportTestResult(TestCase::Result::Success);
+    return 0;
+}
+
+int TestBasicTiming::RunSubcase5(void) {
+
+    /* Call DisarmTimer with ID out of range */
+    TTimerId ret = DisarmTimer(MAX_TIMER_COUNT);
+
+    if (unlikely(ret != TIMER_ID_INVALID)) {
+
+        LogPrint(ELogSeverityLevel_Error, "Unexpectedly succeeded at disarming timer with ID out of range. DisarmTimer returned %d", \
+            ret);
+        TestRunner::ReportTestResult(TestCase::Result::Failure, \
+            "Unexpectedly succeeded at disarming timer with ID out of range");
+        return 0;
+    }
+
+    TestRunner::ReportTestResult(TestCase::Result::Success);
+    return 0;
+}
+
+int TestBasicTiming::RunSubcase6(void) {
+
+    /* DestroyTimer returns nothing. Call it with ID out of range and see if we
+     * survive this without a crash. */
+    DestroyTimer(TIMER_ID_INVALID);
+
+    TestRunner::ReportTestResult(TestCase::Result::Success);
+    return 0;
+}
+
+int TestBasicTiming::RunSubcase7(void) {
+
+    /* Try creating a timer with NULL pointer for the name */
+    TTimerId timerId = CreateTimer(nullptr);
+
+    if (unlikely(timerId != TIMER_ID_INVALID)) {
+
+        LogPrint(ELogSeverityLevel_Error, "Unexpectedly succeeded at creating timer 0x%x with NULL for name", \
+            timerId);
+        TestRunner::ReportTestResult(TestCase::Result::Failure, \
+            "Unexpectedly succeeded at creating timer 0x%x with NULL for name", timerId);
+        return 0;
+    }
+
+    TestRunner::ReportTestResult(TestCase::Result::Success);
     return 0;
 }
 

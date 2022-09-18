@@ -141,7 +141,7 @@ static int ParseStructField(const StructField & field, const char * value, void 
         return 0;
 
     default:
-        RaiseException(EExceptionFatality_Fatal, static_cast<int>(field.Type), \
+        RaiseException(EExceptionFatality_Fatal, \
             "Unknown field type %d of size %d at offset %d in test case args layout specification", \
             static_cast<int>(field.Type), field.Size, field.Offset);
         return -1;

@@ -12,6 +12,12 @@ typedef struct SSharedMemoryHeader {
 
 void * GetMemory(u32 size) {
 
+    if (size == 0) {
+
+        RaiseException(EExceptionFatality_NonFatal, "Tried allocating zero bytes");
+        return NULL;
+    }
+
     em_event_t event = em_alloc(size + sizeof(SSharedMemoryHeader), EM_EVENT_TYPE_SW, APP_MEMORY_EVENT_POOL);
     void * ptr = NULL;
 

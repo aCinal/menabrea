@@ -6,14 +6,6 @@
 #include <menabrea/common.h>
 #include <string.h>
 
-#define FAIL_RESERVE_IF(cond, severity, format, ...) \
-    do { \
-        if (unlikely(cond)) { \
-            LogPrint(ELogSeverityLevel_##severity, format, ##__VA_ARGS__); \
-            return NULL; \
-        } \
-    } while (0)
-
 static void ResetContext(SWorkerContext * context);
 static inline TWorkerId AllocateDynamicLocalId(void);
 static inline void ReleaseDynamicLocalId(TWorkerId localId);
@@ -110,19 +102,27 @@ SWorkerContext * ReserveWorkerContext(TWorkerId workerId) {
         /* Static ID provided */
 
         TWorkerId localId = WorkerIdGetLocal(workerId);
-        FAIL_RESERVE_IF(localId >= MAX_WORKER_COUNT, Warning, \
-            "Requested invalid worker ID: 0x%x", workerId);
+        if (unlikely(localId >= MAX_WORKER_COUNT)) {
 
-        FAIL_RESERVE_IF(localId >= WORKER_ID_DYNAMIC_BASE, Warning, \
-            "Requested worker ID 0x%x in the dynamic range: 0x%x-0x%x", \
-            workerId, WORKER_ID_DYNAMIC_BASE, MAX_WORKER_COUNT - 1);
+            RaiseException(EExceptionFatality_NonFatal, "Requested invalid worker ID: 0x%x", workerId);
+            return NULL;
+        }
+
+        if (unlikely(localId >= WORKER_ID_DYNAMIC_BASE)) {
+
+            RaiseException(EExceptionFatality_NonFatal, \
+                "Requested worker ID 0x%x in the dynamic range: 0x%x-0x%x", \
+                workerId, WORKER_ID_DYNAMIC_BASE, MAX_WORKER_COUNT - 1);
+            return NULL;
+        }
 
         LockWorkerTableEntry(workerId);
         if (s_workerTable[localId]->State != EWorkerState_Inactive) {
 
             EWorkerState state = s_workerTable[localId]->State;
             UnlockWorkerTableEntry(workerId);
-            LogPrint(ELogSeverityLevel_Warning, "Attempted to register worker with static ID 0x%x twice. Current worker in state: %d", \
+            RaiseException(EExceptionFatality_NonFatal, \
+                "Attempted to register worker with static ID 0x%x twice. Current worker in state: %d", \
                 workerId, state);
             return NULL;
         }

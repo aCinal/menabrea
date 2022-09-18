@@ -201,7 +201,7 @@ static inline void HandleTimeoutEvent(em_event_t event) {
         /* Timer in invalid state */
 
         UnlockTimerTableEntry(timerId);
-        RaiseException(EExceptionFatality_Fatal, state, \
+        RaiseException(EExceptionFatality_Fatal, \
             "Daemon handling a timeout event for timer 0x%x in invalid state: %d", \
             timerId, state);
         break;
@@ -308,7 +308,7 @@ static inline void RearmPeriodicTimer(em_event_t event, STimerContext * context)
         break;
 
     default:
-        RaiseException(EExceptionFatality_Fatal, status, \
+        RaiseException(EExceptionFatality_Fatal, \
             "Failed to rearm periodic timer 0x%x - em_tmo_set_abs() returned %" PRI_STAT, \
             context->TimerId, status);
         break;
