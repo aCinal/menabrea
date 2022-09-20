@@ -8,3 +8,4 @@ add_compile_definitions(PRIVATE EM_64_BIT)
 add_compile_definitions(PRIVATE ENV_64_BIT)
 
 add_subdirectory(internode_test)
+add_subdirectory(echo)

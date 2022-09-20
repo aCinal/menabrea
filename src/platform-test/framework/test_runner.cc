@@ -40,11 +40,13 @@ static void HandleCommandRun(const char * testCaseName, char * testArgsString);
 static void HandleCommandStop(void);
 static void ListenerBody(TMessage message);
 static void HandleTestResult(TMessage message);
+static void HandleTimeoutExtension(TMessage message);
+static TMessage CreateTimeoutMessage(void);
 static void StopOngoingTest(void);
 static u32 CurrentTestRunId(void);
 static void StartNewTestRun(void);
 
-static constexpr const u64 TEST_TIMEOUT = 5 * 1000 * 1000;  /* 5 seconds */
+static constexpr const u64 DEFAULT_TEST_TIMEOUT = 5 * 1000 * 1000;  /* 5 seconds */
 
 static constexpr const TMessageId TEST_RESULT_MSG_ID = 0x1410;
 static constexpr const u32 TEST_RESULT_EXTRA_LEN = 160;
@@ -53,6 +55,12 @@ struct STestResult {
     TestCase::Result Result;
     int Core;
     char Extra[TEST_RESULT_EXTRA_LEN];
+};
+static constexpr const TMessageId TEST_TIMEOUT_EXTENSION_MSG_ID = 0x1411;
+struct STestTimeoutExtension {
+    u64 RemainingTime;
+    u32 TestRunId;
+    int Core;
 };
 
 static TWorkerId s_listenerId = WORKER_ID_INVALID;
@@ -122,21 +130,16 @@ void OnPollHup(void) {
     }
 }
 
-void ReportTestResult(TestCase::Result result) {
-
-    ReportTestResult(result, " ");
-}
-
 void ReportTestResult(TestCase::Result result, const char * extra, ...) {
 
     AssertTrue(extra != nullptr);
-    /* Create a timeout message */
-    TMessage timeoutMessage = CreateMessage(TEST_RESULT_MSG_ID, sizeof(STestResult));
+    /* Create a result message */
+    TMessage resultMessage = CreateMessage(TEST_RESULT_MSG_ID, sizeof(STestResult));
     /* Don't leave the system in an inconsistent state - crash immediately if report
      * allocation fails */
-    AssertTrue(timeoutMessage != MESSAGE_INVALID);
+    AssertTrue(resultMessage != MESSAGE_INVALID);
     /* Fill in the payload */
-    STestResult * payload = static_cast<STestResult *>(GetMessagePayload(timeoutMessage));
+    STestResult * payload = static_cast<STestResult *>(GetMessagePayload(resultMessage));
     payload->TestRunId = CurrentTestRunId();
     payload->Result = result;
     payload->Core = GetCurrentCore();
@@ -146,7 +149,34 @@ void ReportTestResult(TestCase::Result result, const char * extra, ...) {
     va_end(args);
 
     /* Send the message to the listener */
-    SendMessage(timeoutMessage, s_listenerId);
+    SendMessage(resultMessage, s_listenerId);
+}
+
+void ExtendTimeout(void) {
+
+    ExtendTimeout(DEFAULT_TEST_TIMEOUT);
+}
+
+void ExtendTimeout(u64 remainingTime) {
+
+    u32 currentTestRun = CurrentTestRunId();
+    /* Create a request message */
+    TMessage extensionRequest = CreateMessage(TEST_TIMEOUT_EXTENSION_MSG_ID, sizeof(STestTimeoutExtension));
+    /* Allow the allocation of the timeout extension request to fail - the test will time out normally */
+    if (unlikely(extensionRequest == MESSAGE_INVALID)) {
+
+        LOG_ERROR("Failed to create the timeout extension request for test run %d", currentTestRun);
+        return;
+    }
+
+    /* Fill in the payload */
+    STestTimeoutExtension * payload = static_cast<STestTimeoutExtension *>(GetMessagePayload(extensionRequest));
+    payload->TestRunId = currentTestRun;
+    payload->Core = GetCurrentCore();
+    payload->RemainingTime = remainingTime;
+
+    /* Send the request to the listener */
+    SendMessage(extensionRequest, s_listenerId);
 }
 
 static Command ParseCommandString(const char * commandString) {
@@ -245,7 +275,7 @@ static void HandleCommandRun(const char * testCaseName, char * testArgsString) {
     }
 
     /* Create a timeout message */
-    TMessage timeoutMessage = CreateMessage(TEST_RESULT_MSG_ID, sizeof(STestResult));
+    TMessage timeoutMessage = CreateTimeoutMessage();
     if (unlikely(timeoutMessage == MESSAGE_INVALID)) {
 
         LOG_ERROR("%s(): Failed to create a timeout message for test case '%s'", \
@@ -258,17 +288,10 @@ static void HandleCommandRun(const char * testCaseName, char * testArgsString) {
         }
         return;
     }
-    /* Fill in the payload */
-    STestResult * payload = static_cast<STestResult *>(GetMessagePayload(timeoutMessage));
-    payload->Result = TestCase::Result::Failure;
-    (void) strncpy(payload->Extra, "Test execution timed out", sizeof(payload->Extra));
-    payload->Extra[sizeof(payload->Extra) - 1] = '\0';
-    payload->TestRunId = CurrentTestRunId();
-    payload->Core = GetCurrentCore();
 
     AssertTrue(s_listenerId != WORKER_ID_INVALID);
     /* Arm the timer */
-    if (unlikely(timeoutTimer != ArmTimer(timeoutTimer, TEST_TIMEOUT, 0, timeoutMessage, s_listenerId))) {
+    if (unlikely(timeoutTimer != ArmTimer(timeoutTimer, DEFAULT_TEST_TIMEOUT, 0, timeoutMessage, s_listenerId))) {
 
         LOG_ERROR("%s(): Failed to arm the timeout timer for test case '%s'", \
             __FUNCTION__, testCaseName);
@@ -326,6 +349,10 @@ static void ListenerBody(TMessage message) {
         HandleTestResult(message);
         break;
 
+    case TEST_TIMEOUT_EXTENSION_MSG_ID:
+        HandleTimeoutExtension(message);
+        break;
+
     default:
         LOG_WARNING("Worker 0x%x received unexpected message 0x%x from 0x%x", \
             GetOwnWorkerId(), GetMessageId(message), GetMessageSender(message));
@@ -361,10 +388,68 @@ static void HandleTestResult(TMessage message) {
     StopOngoingTest();
 }
 
+static void HandleTimeoutExtension(TMessage message) {
+
+    STestTimeoutExtension * payload = static_cast<STestTimeoutExtension *>(GetMessagePayload(message));
+    /* Check if result from the current test */
+    if (s_currentState != State::Busy or payload->TestRunId != CurrentTestRunId()) {
+
+        LOG_WARNING( \
+            "Received obsolete test timeout extension request from 0x%x on core %d (testRunId=%d, currentTestRunId=%d, runnerState=%d)", \
+            GetMessageSender(message), payload->Core, payload->TestRunId, CurrentTestRunId(), static_cast<int>(s_currentState));
+        return;
+    }
+    /* We are in busy state, a test case must be ongoing */
+    AssertTrue(s_currentTestCase != nullptr);
+
+    /* Disarm and rearm the timer with the new timeout message */
+    TMessage timeoutMessage = CreateTimeoutMessage();
+    if (unlikely(timeoutMessage == MESSAGE_INVALID)) {
+
+        LOG_ERROR("Failed to create a new timeout message to satisfy the timeout extension request");
+        return;
+    }
+
+    AssertTrue(s_timeoutTimer != TIMER_ID_INVALID);
+    /* Stop the current timeout */
+    AssertTrue(s_timeoutTimer == DisarmTimer(s_timeoutTimer));
+    /* Rearm the timer */
+    if (unlikely(s_timeoutTimer != ArmTimer(s_timeoutTimer, payload->RemainingTime, 0, timeoutMessage, s_listenerId))) {
+
+        LOG_ERROR("%s(): Failed to rearm the timeout timer for test case '%s'", \
+            __FUNCTION__, s_currentTestCase->GetName());
+        REPORT_BAD("Failed to extend timeout for test case '%s'", s_currentTestCase->GetName());
+        DestroyMessage(timeoutMessage);
+        /* Stop the test immediately */
+        StopOngoingTest();
+    }
+
+    LOG_INFO("Successfully extended timeout of test '%s' - expires in %ld us", \
+        s_currentTestCase->GetName(), payload->RemainingTime);
+}
+
+static TMessage CreateTimeoutMessage(void) {
+
+    TMessage message = CreateMessage(TEST_RESULT_MSG_ID, sizeof(STestResult));
+
+    if (likely(message != MESSAGE_INVALID)) {
+
+        /* Fill in the payload */
+        STestResult * payload = static_cast<STestResult *>(GetMessagePayload(message));
+        payload->Result = TestCase::Result::Failure;
+        (void) strncpy(payload->Extra, "Test execution timed out", sizeof(payload->Extra));
+        payload->Extra[sizeof(payload->Extra) - 1] = '\0';
+        payload->TestRunId = CurrentTestRunId();
+        payload->Core = GetCurrentCore();
+    }
+
+    return message;
+}
+
 static void StopOngoingTest(void) {
 
     AssertTrue(s_currentTestCase != nullptr);
-    LogPrint(ELogSeverityLevel_Info, "Stopping test case '%s'...", s_currentTestCase->GetName());
+    LOG_INFO("Stopping test case '%s'...", s_currentTestCase->GetName());
     s_currentTestCase->StopTest();
     AssertTrue(s_timeoutTimer == DisarmTimer(s_timeoutTimer));
     DestroyTimer(s_timeoutTimer);

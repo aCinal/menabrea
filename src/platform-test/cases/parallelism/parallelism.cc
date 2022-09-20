@@ -105,7 +105,7 @@ int TestParallelism::StartTest(void * args) {
     sharedMem->UseAtomics = params->UseAtomics;
     sharedMem->UseSpinlock = params->UseSpinlock;
 
-    LogPrint(ELogSeverityLevel_Info, "Deploying %d workers that will complete over a shared resource...", \
+    LogPrint(ELogSeverityLevel_Info, "Deploying %d workers that will compete over a shared resource...", \
         params->WorkerCount);
     /* Deploy the workers */
     SWorkerConfig workerConfig = {

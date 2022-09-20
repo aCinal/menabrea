@@ -165,9 +165,6 @@ TTimerId DisarmTimer(TTimerId timerId) {
             /* Transition to idle state */
             ChangeStateFromArmedToIdle(context);
             UnlockTimerTableEntry(timerId);
-
-            LogPrint(ELogSeverityLevel_Debug, "%s(): Cleanly disarmed timer '%s' (0x%x)", \
-                __FUNCTION__, timerName, timerId);
             break;
 
         case EM_ERR_BAD_STATE:

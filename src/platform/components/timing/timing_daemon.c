@@ -116,9 +116,6 @@ static void DaemonEoReceive(void * eoCtx, em_event_t event, em_event_type_t type
 static inline void HandleTimeoutEvent(em_event_t event) {
 
     TTimerId timerId = *(TTimerId *) em_event_pointer(event);
-
-    LogPrint(ELogSeverityLevel_Debug, "Handling timeout event for timer 0x%x...", timerId);
-
     LockTimerTableEntry(timerId);
     STimerContext * context = FetchTimerContext(timerId);
 

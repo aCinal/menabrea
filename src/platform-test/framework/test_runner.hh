@@ -10,8 +10,9 @@ void Init(void);
 void Teardown(void);
 void OnPollIn(char * inputString);
 void OnPollHup(void);
-void ReportTestResult(TestCase::Result result);
-void ReportTestResult(TestCase::Result result, const char * extra, ...) __attribute__((format(printf, 2, 3)));
+void ReportTestResult(TestCase::Result result, const char * extra = " ", ...) __attribute__((format(printf, 2, 3)));
+void ExtendTimeout(void);
+void ExtendTimeout(u64 remainingTime);
 
 }
 
