@@ -12,7 +12,6 @@
 typedef struct SEventDispatcherConfig {
     int Cores;
     odp_instance_t OdpInstance;
-    em_conf_t * EmConf;
     SAppLibsSet * AppLibs;
     SWorkersConfig WorkersConfig;
     SMessagingConfig MessagingConfig;

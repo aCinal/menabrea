@@ -52,7 +52,6 @@ int main(int argc, char **argv) {
     SEventDispatcherConfig dispatcherConfig = {
         .Cores = numOfCpus,
         .OdpInstance = odpInstance,
-        .EmConf = emConf,
         .AppLibs = appLibs,
         .WorkersConfig = {
             .NodeId = startupParams->NodeId

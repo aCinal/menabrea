@@ -55,13 +55,9 @@ typedef struct SChildren {
     pid_t Pids[0];
 } SChildren;
 
-typedef struct SStartupSharedMemory {
+typedef struct SStartupConfig {
     /* OpenDataPlane instance handle */
     odp_instance_t OdpInstance;
-    /* Event machine configuration */
-    em_conf_t * EmConf;
-    /* Flag set when dispatcher teardown should commence */
-    sig_atomic_t DispatcherExitFlag;
     /* Loaded application libraries */
     SAppLibsSet * AppLibs;
     /* Work subsystem configuration */
@@ -70,6 +66,11 @@ typedef struct SStartupSharedMemory {
     SMessagingConfig MessagingConfig;
     /* Memory subsystem configuration */
     SMemoryConfig MemoryConfig;
+} SStartupConfig;
+
+typedef struct SStartupSharedMemory {
+    /* Flag set when dispatcher teardown should commence */
+    sig_atomic_t DispatcherExitFlag;
     /* ODP barriers for EM-cores synchronization */
     odp_barrier_t OdpStartBarrier;
     odp_barrier_t OdpExitBarrier;
@@ -84,9 +85,17 @@ typedef struct SStartupSharedMemory {
     void * _pad[0] ENV_CACHE_LINE_ALIGNED;
 } SStartupSharedMemory;
 
+static SStartupConfig s_platformConfig;
 static SStartupSharedMemory * s_platformShmem = NULL;
 
 void RunEventDispatchers(SEventDispatcherConfig * config) {
+
+    /* Set config in static per-process data to be inherited by the child dispatchers */
+    s_platformConfig.OdpInstance = config->OdpInstance;
+    s_platformConfig.AppLibs = config->AppLibs;
+    s_platformConfig.MemoryConfig = config->MemoryConfig;
+    s_platformConfig.MessagingConfig = config->MessagingConfig;
+    s_platformConfig.WorkersConfig = config->WorkersConfig;
 
     /* Set up shared memory */
     s_platformShmem = CreatePlatformSharedMemory(config);
@@ -107,14 +116,7 @@ static inline SStartupSharedMemory * CreatePlatformSharedMemory(SEventDispatcher
     AssertTrue(shmPtr != NULL);
     (void) memset(shmPtr, 0, sizeof(SStartupSharedMemory));
 
-    shmPtr->OdpInstance = config->OdpInstance;
-    shmPtr->EmConf = config->EmConf;
-    shmPtr->AppLibs = config->AppLibs;
     shmPtr->DispatcherExitFlag = 0;
-    shmPtr->WorkersConfig = config->WorkersConfig;
-    shmPtr->MessagingConfig = config->MessagingConfig;
-    shmPtr->MemoryConfig = config->MemoryConfig;
-
     /* Initialize the sync primitives */
     odp_barrier_init(&shmPtr->OdpStartBarrier, config->Cores);
     odp_barrier_init(&shmPtr->OdpExitBarrier, config->Cores);
@@ -239,13 +241,13 @@ static inline void RunPlatformGlobalInit(void) {
     /* Set up queue groups used by platform EOs and application 'workers' */
     SetUpQueueGroups();
     /* Initialize the workers component (application abstraction on top of EOs) */
-    WorkersInit(&s_platformShmem->WorkersConfig);
+    WorkersInit(&s_platformConfig.WorkersConfig);
     /* Initialize the internal communications component */
-    MessagingInit(&s_platformShmem->MessagingConfig);
+    MessagingInit(&s_platformConfig.MessagingConfig);
     /* Initialize the timers component */
     TimingInit();
     /* Initialize the memory pool for application use */
-    MemorySetup(&s_platformShmem->MemoryConfig);
+    MemorySetup(&s_platformConfig.MemoryConfig);
     /* Register an em_send() hook exposed by the input component */
     AssertTrue(EM_OK == em_hooks_register_send(EmApiHookSend));
 }
@@ -372,7 +374,7 @@ static inline void ChildDispatcherInit(int physicalCore) {
     AssertTrue(0 == sched_setaffinity(0, sizeof(cpu_set_t), &cpuMask));
 
     /* Initialize ODP locally (note that the main dispatcher) */
-    AssertTrue(0 == odp_init_local(s_platformShmem->OdpInstance, \
+    AssertTrue(0 == odp_init_local(s_platformConfig.OdpInstance, \
         ODP_THREAD_WORKER));
 
     /* Initialize EM core */
@@ -479,9 +481,9 @@ static inline void WaitForChildDispatchers(SChildren * children) {
 
 static inline void RunApplicationsGlobalInits(void) {
 
-    for (int i = 0; i < s_platformShmem->AppLibs->Count; i++) {
+    for (int i = 0; i < s_platformConfig.AppLibs->Count; i++) {
 
-        SAppLib * appLib = &s_platformShmem->AppLibs->Libs[i];
+        SAppLib * appLib = &s_platformConfig.AppLibs->Libs[i];
         LogPrint(ELogSeverityLevel_Info, "Running global init of %s...", \
             appLib->Name);
         appLib->GlobalInit();
@@ -491,9 +493,9 @@ static inline void RunApplicationsGlobalInits(void) {
 static inline void RunApplicationsLocalInits(void) {
 
     int core = em_core_id();
-    for (int i = 0; i < s_platformShmem->AppLibs->Count; i++) {
+    for (int i = 0; i < s_platformConfig.AppLibs->Count; i++) {
 
-        SAppLib * appLib = &s_platformShmem->AppLibs->Libs[i];
+        SAppLib * appLib = &s_platformConfig.AppLibs->Libs[i];
         LogPrint(ELogSeverityLevel_Info, "Running local init of %s on core %d...", \
             appLib->Name, core);
         appLib->LocalInit(core);
@@ -503,9 +505,9 @@ static inline void RunApplicationsLocalInits(void) {
 static inline void RunApplicationsLocalExits(void) {
 
     int core = em_core_id();
-    for (int i = 0; i < s_platformShmem->AppLibs->Count; i++) {
+    for (int i = 0; i < s_platformConfig.AppLibs->Count; i++) {
 
-        SAppLib * appLib = &s_platformShmem->AppLibs->Libs[i];
+        SAppLib * appLib = &s_platformConfig.AppLibs->Libs[i];
         LogPrint(ELogSeverityLevel_Info, "Running local exit of %s on core %d...", \
             appLib->Name, core);
         appLib->LocalExit(core);
@@ -514,9 +516,9 @@ static inline void RunApplicationsLocalExits(void) {
 
 static inline void RunApplicationsGlobalExits(void) {
 
-    for (int i = 0; i < s_platformShmem->AppLibs->Count; i++) {
+    for (int i = 0; i < s_platformConfig.AppLibs->Count; i++) {
 
-        SAppLib * appLib = &s_platformShmem->AppLibs->Libs[i];
+        SAppLib * appLib = &s_platformConfig.AppLibs->Libs[i];
         LogPrint(ELogSeverityLevel_Info, "Running global exit of %s...", \
             appLib->Name);
         appLib->GlobalExit();
