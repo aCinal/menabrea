@@ -9,11 +9,19 @@
 
 void SendMessage(TMessage message, TWorkerId receiver) {
 
+    if (unlikely(message == MESSAGE_INVALID)) {
+
+        RaiseException(EExceptionFatality_NonFatal, \
+            "Tried sending MESSAGE_INVALID to 0x%x", \
+            receiver);
+        return;
+    }
+
     if (unlikely(receiver == WORKER_ID_INVALID || WorkerIdGetLocal(receiver) >= MAX_WORKER_COUNT || WorkerIdGetNode(receiver) > MAX_NODE_ID)) {
 
-        /* Invalid receiver, return early */
-        LogPrint(ELogSeverityLevel_Warning, "%s(): Invalid receiver 0x%x of message 0x%x. Message not sent!", \
-            __FUNCTION__, receiver, GetMessageId(message));
+        RaiseException(EExceptionFatality_NonFatal, \
+            "Invalid receiver 0x%x of message 0x%x. Message not sent!", \
+            receiver, GetMessageId(message));
         DestroyMessage(message);
         return;
     }
