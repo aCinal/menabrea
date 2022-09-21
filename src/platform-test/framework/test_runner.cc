@@ -422,6 +422,7 @@ static void HandleTimeoutExtension(TMessage message) {
         DestroyMessage(timeoutMessage);
         /* Stop the test immediately */
         StopOngoingTest();
+        return;
     }
 
     LOG_INFO("Successfully extended timeout of test '%s' - expires in %ld us", \

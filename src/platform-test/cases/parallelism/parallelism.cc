@@ -111,7 +111,6 @@ int TestParallelism::StartTest(void * args) {
     SWorkerConfig workerConfig = {
         .Name = "ParallelismTester",
         .WorkerId = WORKER_ID_INVALID,
-        /* Let the same worker execute on multiple cores at the same time */
         .CoreMask = GetAllCoresMask(),
         .Parallel = params->UseParallelWorkers,
         .UserInit = WorkerInit,
