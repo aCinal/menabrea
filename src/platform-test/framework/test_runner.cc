@@ -43,15 +43,13 @@ static void HandleTestResult(TMessage message);
 static void HandleTimeoutExtension(TMessage message);
 static TMessage CreateTimeoutMessage(void);
 static void StopOngoingTest(void);
-static u32 CurrentTestRunId(void);
+static u64 CurrentTestRunId(void);
 static void StartNewTestRun(void);
-
-static constexpr const u64 DEFAULT_TEST_TIMEOUT = 5 * 1000 * 1000;  /* 5 seconds */
 
 static constexpr const TMessageId TEST_RESULT_MSG_ID = 0x1410;
 static constexpr const u32 TEST_RESULT_EXTRA_LEN = 160;
 struct STestResult {
-    u32 TestRunId;
+    u64 TestRunId;
     TestCase::Result Result;
     int Core;
     char Extra[TEST_RESULT_EXTRA_LEN];
@@ -59,7 +57,7 @@ struct STestResult {
 static constexpr const TMessageId TEST_TIMEOUT_EXTENSION_MSG_ID = 0x1411;
 struct STestTimeoutExtension {
     u64 RemainingTime;
-    u32 TestRunId;
+    u64 TestRunId;
     int Core;
 };
 
@@ -67,16 +65,16 @@ static TWorkerId s_listenerId = WORKER_ID_INVALID;
 static State s_currentState = State::Idle;
 static TTimerId s_timeoutTimer = TIMER_ID_INVALID;
 static TestCase::Instance * s_currentTestCase = nullptr;
-static env_atomic64_t * s_testRunCounterPtr = nullptr;
+static TAtomic64 * s_testRunCounterPtr = nullptr;
 
 void Init(void) {
 
     s_listenerId = DeploySimpleWorker("TestResultListener", WORKER_ID_INVALID, GetSharedCoreMask(), ListenerBody);
     AssertTrue(s_listenerId != WORKER_ID_INVALID);
 
-    s_testRunCounterPtr = static_cast<env_atomic64_t *>(GetMemory(sizeof(env_atomic64_t)));
+    s_testRunCounterPtr = static_cast<TAtomic64 *>(GetMemory(sizeof(TAtomic64)));
     AssertTrue(s_testRunCounterPtr != nullptr);
-    env_atomic64_init(s_testRunCounterPtr);
+    Atomic64Init(s_testRunCounterPtr);
 }
 
 void Teardown(void) {
@@ -152,20 +150,15 @@ void ReportTestResult(TestCase::Result result, const char * extra, ...) {
     SendMessage(resultMessage, s_listenerId);
 }
 
-void ExtendTimeout(void) {
-
-    ExtendTimeout(DEFAULT_TEST_TIMEOUT);
-}
-
 void ExtendTimeout(u64 remainingTime) {
 
-    u32 currentTestRun = CurrentTestRunId();
+    u64 currentTestRun = CurrentTestRunId();
     /* Create a request message */
     TMessage extensionRequest = CreateMessage(TEST_TIMEOUT_EXTENSION_MSG_ID, sizeof(STestTimeoutExtension));
     /* Allow the allocation of the timeout extension request to fail - the test will time out normally */
     if (unlikely(extensionRequest == MESSAGE_INVALID)) {
 
-        LOG_ERROR("Failed to create the timeout extension request for test run %d", currentTestRun);
+        LOG_ERROR("Failed to create the timeout extension request for test run %ld", currentTestRun);
         return;
     }
 
@@ -305,7 +298,7 @@ static void HandleCommandRun(const char * testCaseName, char * testArgsString) {
         return;
     }
 
-    LOG_INFO("Starting test case '%s' in test run %d...", \
+    LOG_INFO("Starting test case '%s' in test run %ld...", \
         testCaseInstance->GetName(), CurrentTestRunId());
     /* Call virtual start method */
     if (unlikely(testCaseInstance->StartTest(testParams))) {
@@ -369,7 +362,7 @@ static void HandleTestResult(TMessage message) {
     if (s_currentState != State::Busy or payload->TestRunId != CurrentTestRunId()) {
 
         LOG_WARNING( \
-            "Received obsolete test result report from 0x%x on core %d (testRunId=%d, currentTestRunId=%d, runnerState=%d, result=%s, extra='%s')", \
+            "Received obsolete test result report from 0x%x on core %d (testRunId=%ld, currentTestRunId=%ld, runnerState=%d, result=%s, extra='%s')", \
             GetMessageSender(message), payload->Core, payload->TestRunId, CurrentTestRunId(), static_cast<int>(s_currentState), \
             payload->Result == TestCase::Result::Success ? "success" : "failure", payload->Extra);
         return;
@@ -395,7 +388,7 @@ static void HandleTimeoutExtension(TMessage message) {
     if (s_currentState != State::Busy or payload->TestRunId != CurrentTestRunId()) {
 
         LOG_WARNING( \
-            "Received obsolete test timeout extension request from 0x%x on core %d (testRunId=%d, currentTestRunId=%d, runnerState=%d)", \
+            "Received obsolete test timeout extension request from 0x%x on core %d (testRunId=%ld, currentTestRunId=%ld, runnerState=%d)", \
             GetMessageSender(message), payload->Core, payload->TestRunId, CurrentTestRunId(), static_cast<int>(s_currentState));
         return;
     }
@@ -459,18 +452,18 @@ static void StopOngoingTest(void) {
     s_currentState = State::Idle;
 }
 
-static u32 CurrentTestRunId(void) {
+static u64 CurrentTestRunId(void) {
 
     AssertTrue(s_testRunCounterPtr != nullptr);
     /* Atomically load the current test run ID from shared memory */
-    return env_atomic64_get(s_testRunCounterPtr);
+    return Atomic64Get(s_testRunCounterPtr);
 }
 
 static void StartNewTestRun(void) {
 
     AssertTrue(s_testRunCounterPtr != nullptr);
     /* Atomically increment the current test run ID in shared memory */
-    env_atomic64_inc(s_testRunCounterPtr);
+    Atomic64Inc(s_testRunCounterPtr);
 }
 
 }
