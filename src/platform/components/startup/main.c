@@ -39,7 +39,7 @@ int main(int argc, char **argv) {
 
     /* Configure and initialize the OpenEM layer */
     SEmStartupConfig emStartupConfig = {
-        .CoreMask = "0xF",
+        .Cores = numOfCpus,
         .DefaultPoolConfig = TranslateToEmPoolConfig(&startupParams->DefaultPoolConfig, EM_EVENT_TYPE_SW)
     };
     em_conf_t * emConf = InitializeEventMachine(&emStartupConfig);

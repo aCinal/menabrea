@@ -5,7 +5,7 @@
 #include <event_machine.h>
 
 typedef struct SEmStartupConfig {
-    const char * CoreMask;
+    int Cores;
     em_pool_cfg_t DefaultPoolConfig;
 } SEmStartupConfig;
 

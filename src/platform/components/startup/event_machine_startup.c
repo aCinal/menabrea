@@ -20,19 +20,27 @@ em_conf_t * InitializeEventMachine(SEmStartupConfig * config) {
     /* Use process mode */
     emConf->thread_per_core = 0;
     emConf->process_per_core = 1;
+
+    /* Set relevant core masks */
     em_core_mask_zero(&emConf->phys_mask);
-    (void) em_core_mask_set_str(config->CoreMask, &emConf->phys_mask);
+    em_core_mask_zero(&emConf->input.input_poll_mask);
+    for (int i = 0; i < config->Cores; i++) {
+
+        em_core_mask_set(i, &emConf->phys_mask);
+        /* Enable input polling on all cores */
+        em_core_mask_set(i, &emConf->input.input_poll_mask);
+    }
     emConf->core_count = em_core_mask_count(&emConf->phys_mask);
+
+    /* Set the input poll callback */
+    emConf->input.input_poll_fn = EmInputPollFunction;
+
     /* Enable event timer */
     emConf->event_timer = 1;
     emConf->default_pool_cfg = config->DefaultPoolConfig;
     /* Override logger functions */
     emConf->log.log_fn = EmLogger;
     emConf->log.vlog_fn = EmVLogger;
-    /* Enable input polling on all cores */
-    emConf->input.input_poll_fn = EmInputPollFunction;
-    em_core_mask_zero(&emConf->input.input_poll_mask);
-    (void) em_core_mask_set_str(config->CoreMask, &emConf->input.input_poll_mask);
 
     AssertTrue(EM_OK == em_init(emConf));
     LogPrint(ELogSeverityLevel_Info, "OpenEM layer ready");
