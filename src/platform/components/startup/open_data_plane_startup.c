@@ -32,7 +32,14 @@ odp_instance_t InitializeOpenDataPlane(SOdpStartupConfig * config) {
     initParams.control_cpus = &control_mask;
     initParams.log_fn = OdpLogger;
 
-    /* TODO: Set unused features */
+    /* Set unused features to optimize performance */
+    initParams.not_used.feat.cls = 1;       /* Classifier APIs */
+    initParams.not_used.feat.compress = 1;  /* Compression APIs */
+    initParams.not_used.feat.crypto = 1;    /* Crypto APIs */
+    initParams.not_used.feat.dma = 1;       /* DMA APIs */
+    initParams.not_used.feat.ipsec = 1;     /* IPsec APIs */
+    initParams.not_used.feat.stash = 1;     /* Stash APIs */
+    initParams.not_used.feat.tm = 1;        /* Traffic manager APIs */
 
     /* Set the memory model */
     initParams.mem_model = ODP_MEM_MODEL_PROCESS;
@@ -66,7 +73,6 @@ void TearDownOpenDataPlane(odp_instance_t odpInstance) {
 
 static int OdpLogger(odp_log_level_t level, const char * format, ...) {
 
-    (void) level;
     va_list ap;
     va_start(ap, format);
     LogPrintV(MapSeverityLevel(level), format, ap);
