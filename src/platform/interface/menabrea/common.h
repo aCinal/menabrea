@@ -53,4 +53,3 @@ static inline void SpinlockAcquire(TSpinlock * lock)                            
 static inline void SpinlockRelease(TSpinlock * lock)                            { env_spinlock_unlock(lock); }
 
 #endif /* PLATFORM_INTERFACE_MENABREA_COMMON_H */
-
