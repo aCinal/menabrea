@@ -266,7 +266,7 @@ TWorkerId GetOwnWorkerId(void) {
     return context->WorkerId;
 }
 
-void LeaveCriticalSection(void) {
+void EndAtomicContext(void) {
 
     em_eo_t self = em_eo_current();
     /* Do not allow calling this function from a non-EO context */

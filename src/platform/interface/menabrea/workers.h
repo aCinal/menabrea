@@ -221,7 +221,7 @@ TWorkerId GetOwnWorkerId(void);
  * @brief For non-parallel workers, give a hint to the scheduler that atomic processing is done
  *        and the worker can be scheduled again in parallel
  */
-void LeaveCriticalSection(void);
+void EndAtomicContext(void);
 
 #ifdef __cplusplus
 }

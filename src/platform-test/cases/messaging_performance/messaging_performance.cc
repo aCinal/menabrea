@@ -263,7 +263,7 @@ static void WorkerBody(TMessage message) {
 static void HandlePerfTestMsg(TMessage message) {
 
     /* Immediately allow the worker to be scheduled in parallel on a different core */
-    LeaveCriticalSection();
+    EndAtomicContext();
 
     PerfTestShmem * shmem = static_cast<PerfTestShmem *>(GetSharedData());
 
@@ -326,7 +326,7 @@ static void HandleTimeoutMsg(TMessage message) {
     shmem->RoundsRemaining--;
 
     /* Allow the worker to be scheduled in parallel on a different core */
-    LeaveCriticalSection();
+    EndAtomicContext();
     SendTestMessages();
 }
 

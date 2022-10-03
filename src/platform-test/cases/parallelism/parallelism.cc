@@ -280,7 +280,7 @@ static void WorkerBody(TMessage message) {
         /* Allow another instance of an atomic worker to be scheduled in parallel -
          * this way we can test that EM's atomic processing works as expected and
          * serves as an alternative mean of synchronization */
-        LeaveCriticalSection();
+        EndAtomicContext();
 
         /* Current execution path is done accessing the memory under test
          * - decrement the counter */
@@ -305,7 +305,7 @@ static void WorkerBody(TMessage message) {
             TouchData();
         }
 
-        /* We do not call LeaveCriticalSection at this point since this is the last time
+        /* We do not call EndAtomicContext at this point since this is the last time
          * an atomic worker will make access to the shared memory */
 
         /* The worker may be parallel, so before declaring our job done wait for
