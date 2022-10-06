@@ -17,6 +17,7 @@
         { "name": "TestBasicWorkers", "params": { "subcase": 6 } },
         { "name": "TestBasicWorkers", "params": { "subcase": 7 } },
         { "name": "TestBasicWorkers", "params": { "subcase": 8 } },
+        { "name": "TestBasicWorkers", "params": { "subcase": 9 } },
         { "name": "TestMessageBuffering", "params": { "overload": 20 } },
         { "name": "TestMessagingPerformance", "params": { "echoId": "0x1700", "payloadSize": 256, "rounds": 16, "burst": 16, "period": 15000 } },
         { "name": "TestParallelism", "params": { "workers": 1, "rounds": 1024, "loops": 4096, "useAtomics": false, "useSpinlock": false, "useParallelWorkers": false } },

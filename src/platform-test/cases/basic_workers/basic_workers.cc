@@ -14,6 +14,7 @@ static constexpr const TWorkerId DUMMY_WORKER_ID = 0x420;
 
 static int Subcase2GlobalInit(void * arg);
 static void Subcase3LocalInit(int core);
+static int Subcase9GlobalInit(void * arg);
 static void DummyBody(TMessage message);
 
 u32 TestBasicWorkers::GetParamsSize(void) {
@@ -60,6 +61,9 @@ int TestBasicWorkers::StartTest(void * args) {
 
     case 8:
         return RunSubcase8();
+
+    case 9:
+        return RunSubcase9();
 
     default:
         LogPrint(ELogSeverityLevel_Error, "Invalid subcase %d for test case '%s'", \
@@ -211,10 +215,10 @@ int TestBasicWorkers::RunSubcase6(void) {
 
         TerminateWorker(workerId);
         LogPrint(ELogSeverityLevel_Error, \
-            "Unexpectedly succeeded at deploying a worker 0x%x with NULL pointer for config during test '%s'", \
+            "Unexpectedly succeeded at deploying worker 0x%x with NULL pointer for config during test '%s'", \
             workerId, this->GetName());
         TestRunner::ReportTestResult(TestCase::Result::Failure, \
-            "Unexpectedly succeeded at deploying a worker 0x%x with NULL pointer for config", \
+            "Unexpectedly succeeded at deploying worker 0x%x with NULL pointer for config", \
             workerId);
         return 0;
     }
@@ -235,10 +239,10 @@ int TestBasicWorkers::RunSubcase7(void) {
 
         TerminateWorker(workerId);
         LogPrint(ELogSeverityLevel_Error, \
-            "Unexpectedly succeeded at deploying a worker 0x%x with NULL pointer for name during test '%s'", \
+            "Unexpectedly succeeded at deploying worker 0x%x with NULL pointer for name during test '%s'", \
             workerId, this->GetName());
         TestRunner::ReportTestResult(TestCase::Result::Failure, \
-            "Unexpectedly succeeded at deploying a worker 0x%x with NULL pointer for name", \
+            "Unexpectedly succeeded at deploying worker 0x%x with NULL pointer for name", \
             workerId);
         return 0;
     }
@@ -259,12 +263,38 @@ int TestBasicWorkers::RunSubcase8(void) {
 
         TerminateWorker(workerId);
         LogPrint(ELogSeverityLevel_Error, \
-            "Unexpectedly succeeded at deploying a worker 0x%x with NULL pointer for worker body during test '%s'", \
+            "Unexpectedly succeeded at deploying worker 0x%x with NULL pointer for worker body during test '%s'", \
             workerId, this->GetName());
         TestRunner::ReportTestResult(TestCase::Result::Failure, \
-            "Unexpectedly succeeded at deploying a worker 0x%x with NULL pointer for worker body", \
+            "Unexpectedly succeeded at deploying worker 0x%x with NULL pointer for worker body", \
             workerId);
         return 0;
+    }
+
+    TestRunner::ReportTestResult(TestCase::Result::Success);
+    return 0;
+}
+
+int TestBasicWorkers::RunSubcase9(void) {
+
+    SWorkerConfig workerConfig = {
+        .Name = "Subcase9Worker",
+        .WorkerId = WORKER_ID_INVALID,
+        .CoreMask = GetAllCoresMask(),
+        .UserInit = Subcase9GlobalInit,
+        .WorkerBody = DummyBody
+    };
+    /* Encounter a failure in application callback (user init) */
+    TWorkerId workerId = DeployWorker(&workerConfig);
+    if (unlikely(workerId != WORKER_ID_INVALID)) {
+
+        LogPrint(ELogSeverityLevel_Error, \
+            "Unexpectedly succeeded at deploying worker 0x%x despite user init failure during test '%s'", \
+            workerId, this->GetName());
+        TestRunner::ReportTestResult(TestCase::Result::Failure, \
+            "Unexpectedly succeeded at deploying worker 0x%x despite user init failure", \
+            workerId);
+        return -1;
     }
 
     TestRunner::ReportTestResult(TestCase::Result::Success);
@@ -289,6 +319,13 @@ static void Subcase3LocalInit(int core) {
         TerminateWorker(WORKER_ID_INVALID);
         TestRunner::ReportTestResult(TestCase::Result::Success);
     }
+}
+
+static int Subcase9GlobalInit(void * arg) {
+
+    (void) arg;
+    /* Fail the user init */
+    return -1;
 }
 
 static void DummyBody(TMessage message) {
