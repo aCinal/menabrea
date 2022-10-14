@@ -20,6 +20,7 @@
         { "name": "TestBasicWorkers", "params": { "subcase": 9 } },
         { "name": "TestMessageBuffering", "params": { "overload": 20 } },
         { "name": "TestMessagingPerformance", "params": { "echoId": "0x1700", "payloadSize": 256, "rounds": 16, "burst": 16, "period": 15000 } },
+        { "name": "TestOneshotTimer", "params": { "maxError": 30000, "expiration": 5000, "messages": 5 } },
         { "name": "TestParallelism", "params": { "workers": 1, "rounds": 1024, "loops": 4096, "useAtomics": false, "useSpinlock": false, "useParallelWorkers": false } },
         { "name": "TestParallelism", "params": { "workers": 12, "rounds": 128, "loops": 4096, "useAtomics": true, "useSpinlock": false, "useParallelWorkers": true } },
         { "name": "TestParallelism", "params": { "workers": 12, "rounds": 128, "loops": 4096, "useAtomics": false, "useSpinlock": true, "useParallelWorkers": true } },

@@ -9,6 +9,9 @@
 #include <menabrea/exception.h>
 #include <chrono>
 
+using SteadyClock = std::chrono::steady_clock;
+using TimePoint = SteadyClock::time_point;
+
 static TWorkerId s_receiverId = WORKER_ID_INVALID;
 static TTimerId s_timerId = TIMER_ID_INVALID;
 
@@ -25,7 +28,7 @@ struct TestPeriodicTimerParams {
 };
 
 struct TestPeriodicTimerShmem {
-    std::chrono::steady_clock::time_point LastTimeout;
+    TimePoint LastTimeout;
     u64 ExpectedPeriod;
     u64 MaxError;
     u32 MessagesReceived;
@@ -58,7 +61,7 @@ int TestPeriodicTimer::StartTest(void * args) {
         LogPrint(ELogSeverityLevel_Error, "Failed to allocate shared memory for test '%s'", this->GetName());
         return -1;
     }
-    new (&shmem->LastTimeout) std::chrono::steady_clock::time_point;
+    new (&shmem->LastTimeout) TimePoint;
     shmem->ExpectedPeriod = params->TimerPeriod;
     shmem->MaxError = params->MaxError;
     shmem->MessagesReceived = 0;
@@ -136,6 +139,9 @@ static void ReceiverExit(void) {
 
 static void ReceiverBody(TMessage message) {
 
+    /* Get the current time as early as possible */
+    TimePoint currentTime = SteadyClock::now();
+
     TestPeriodicTimerShmem * shmem = static_cast<TestPeriodicTimerShmem *>(GetSharedData());
 
     if (unlikely(GetMessageId(message) != TEST_MESSAGE_ID)) {
@@ -147,9 +153,6 @@ static void ReceiverBody(TMessage message) {
         DestroyMessage(message);
         return;
     }
-
-    /* TODO: Consider the overhead of std::chrono (is the time access optimized thanks to VDSO?) */
-    std::chrono::steady_clock::time_point currentTime = std::chrono::steady_clock::now();
 
     /* Only check the drift after the first message has been received */
     if (shmem->MessagesReceived > 0) {
