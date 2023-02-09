@@ -19,6 +19,7 @@ inherit autotools pkgconfig
 
 EXTRA_OECONF:append = " --without-examples"
 EXTRA_OECONF:append = " --without-tests"
+EXTRA_OECONF:append = " --enable-lto"
 
 # Uncomment to enable debug logs at ODP level
 # EXTRA_OECONF:append = " --enable-debug-print"

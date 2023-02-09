@@ -18,6 +18,7 @@ DEPENDS = " \
 inherit autotools pkgconfig
 
 EXTRA_OECONF:append = " --without-programs"
+EXTRA_OECONF:append = " --enable-lto"
 
 # Uncomment to enable debug logs at EM level
 # EXTRA_OECONF:append = " --enable-debug-print"
