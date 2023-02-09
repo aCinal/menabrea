@@ -17,5 +17,8 @@ DEPENDS = " \
 
 inherit autotools pkgconfig
 
+EXTRA_OECONF:append = " --without-examples"
+EXTRA_OECONF:append = " --without-tests"
+
 # Uncomment to enable debug logs at ODP level
-# EXTRA_OECONF:append = "--enable-debug-print"
+# EXTRA_OECONF:append = " --enable-debug-print"
