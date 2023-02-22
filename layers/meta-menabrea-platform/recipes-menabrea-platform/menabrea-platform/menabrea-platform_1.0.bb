@@ -21,10 +21,9 @@ inherit cmake systemd
 PLATFORM_CONFIG_PATH:menabrea-node1 := "node1/platform_config.json"
 PLATFORM_CONFIG_PATH:menabrea-node2 := "node2/platform_config.json"
 PLATFORM_CONFIG_PATH:menabrea-node3 := "node3/platform_config.json"
-PLATFORM_CONFIG_PATH:menabrea-qemu := "qemu/platform_config.json"
+PLATFORM_CONFIG_PATH:menabrea-qemu  := "qemu/platform_config.json"
 
 FILES:${PN} += "/opt"
-FILES:${PN} += "${sysconfdir}"
 FILES:${PN} += "${systemd_unitdir}/system/menabrea.service"
 
 SYSTEMD_SERVICE:${PN} = "${@bb.utils.contains('MENABREA_AUTOSTART', '1', 'menabrea.service', '', d)}"

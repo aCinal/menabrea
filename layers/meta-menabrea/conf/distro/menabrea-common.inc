@@ -8,8 +8,9 @@ DISTRO_FEATURES_BACKFILL_CONSIDERED = "sysvinit"
 FILESPATH:append = ":${TOPDIR}/../src"
 FILESPATH:append = ":${TOPDIR}/../config"
 
-# Enable UART on the Raspberry Pi 4
-ENABLE_UART := "1"
+# Let systemd start the platform at boot by default, unless running a development build
+MENABREA_AUTOSTART              = "1"
+MENABREA_AUTOSTART:menabrea-dev = "0"
 
-# Let systemd start the platform at boot by default
-MENABREA_AUTOSTART ?= "1"
+# Enable UART on the Raspberry Pi 4 in the development image
+ENABLE_UART:menabrea-dev := "1"

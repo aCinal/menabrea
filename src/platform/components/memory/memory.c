@@ -64,6 +64,5 @@ void PutMemory(void * ptr) {
 
         /* Return the event to the pool */
         em_free(hdr->Event);
-
     }
 }

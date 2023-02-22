@@ -373,7 +373,7 @@ static inline void ChildDispatcherInit(int physicalCore) {
     CPU_SET(physicalCore, &cpuMask);
     AssertTrue(0 == sched_setaffinity(0, sizeof(cpu_set_t), &cpuMask));
 
-    /* Initialize ODP locally (note that the main dispatcher) */
+    /* Initialize ODP locally */
     AssertTrue(0 == odp_init_local(s_platformConfig.OdpInstance, \
         ODP_THREAD_WORKER));
 

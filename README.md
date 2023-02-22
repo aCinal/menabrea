@@ -29,6 +29,8 @@ MACHINE=qemuarm64 DISTRO=menabrea-qemu bitbake menabrea-image
 runqemu qemuarm64 nographic
 ```
 
+Alternatively, the variables `MACHINE` and `DISTRO` can be set in `build/conf/local.conf` in which case the command is only `bitbake menabrea-image`.
+
 ---
 
 ### Deploying to a rack of Raspberry Pi 4's
@@ -62,7 +64,7 @@ MACHINE=raspberrypi4-64 DISTRO=menabrea-node3 bitbake menabrea-image
 
 Connect to the board via serial connection, e.g. using `picocom`:
 
-```
+```bash
 sudo picocom -b 115200 -l -r <USB-to-serial device>
 ```
 
@@ -70,12 +72,18 @@ where `<USB-to-serial device>` is, e.g. `/dev/ttyUSB0`.
 
 ---
 
-### Platform autostart
+### Development build
 
-The platform is started automatically as a systemd service. To prevent this set `MENABREA_AUTOSTART = "0"` in your `build/conf/local.conf` and rebuild the image. You can then modify configuration options in `/opt/platform_config.json` and start the platform manually:
+To enable development features such as the serial console and an SSH server, add the following line in `build/conf/local.conf`:
+
+```
+OVERRIDES =. "menabrea-dev:"
+```
+
+When using the development build the platform is not started automatically, allowing the developer to log in to the Raspberry Pi, modify the configuration options in `/opt/platform_config.json` and start the platform manually:
 
 ```bash
-python3 /opt/menabrea.py
+systemctl start menabrea
 ```
 
 ---
