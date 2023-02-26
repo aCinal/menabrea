@@ -86,7 +86,7 @@ int main(int argc, char **argv) {
 
 static void InitializeLogger(void) {
 
-    /* Determine verbosity based on environment variable to have the logger
+    /* Determine verbosity based on an environment variable to have the logger
      * up and running when parsing the command line */
     char * verbosity = getenv(LOG_VERBOSITY_ENV);
     bool verbose = verbosity && 0 == strcmp(verbosity, "1");

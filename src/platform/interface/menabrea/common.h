@@ -52,4 +52,24 @@ static inline void SpinlockInit(TSpinlock * lock)                               
 static inline void SpinlockAcquire(TSpinlock * lock)                            { env_spinlock_lock(lock); }
 static inline void SpinlockRelease(TSpinlock * lock)                            { env_spinlock_unlock(lock); }
 
+/* TODO: Add Doxygen comments in this file */
+
+#define __APPLICATION_GLOBAL_INIT_NAME  ApplicationGlobalInit
+#define __APPLICATION_LOCAL_INIT_NAME   ApplicationLocalInit
+#define __APPLICATION_LOCAL_EXIT_NAME   ApplicationLocalExit
+#define __APPLICATION_GLOBAL_EXIT_NAME  ApplicationGlobalExit
+
+#define __MACRO_STRINGIFY_IMPL(x)       #x
+#define __MACRO_STRINGIFY(x)            __MACRO_STRINGIFY_IMPL(x)
+
+#define __APPLICATION_GLOBAL_INIT_SYM   __MACRO_STRINGIFY(__APPLICATION_GLOBAL_INIT_NAME)
+#define __APPLICATION_LOCAL_INIT_SYM    __MACRO_STRINGIFY(__APPLICATION_LOCAL_INIT_NAME)
+#define __APPLICATION_LOCAL_EXIT_SYM    __MACRO_STRINGIFY(__APPLICATION_LOCAL_EXIT_NAME)
+#define __APPLICATION_GLOBAL_EXIT_SYM   __MACRO_STRINGIFY(__APPLICATION_GLOBAL_EXIT_NAME)
+
+#define APPLICATION_GLOBAL_INIT()       extern "C" __attribute__((visibility("default"))) void __APPLICATION_GLOBAL_INIT_NAME(void)
+#define APPLICATION_LOCAL_INIT(__core)  extern "C" __attribute__((visibility("default"))) void __APPLICATION_LOCAL_INIT_NAME(int __core)
+#define APPLICATION_LOCAL_EXIT(__core)  extern "C" __attribute__((visibility("default"))) void __APPLICATION_LOCAL_EXIT_NAME(int __core)
+#define APPLICATION_GLOBAL_EXIT()       extern "C" __attribute__((visibility("default"))) void __APPLICATION_GLOBAL_EXIT_NAME(void)
+
 #endif /* PLATFORM_INTERFACE_MENABREA_COMMON_H */

@@ -15,6 +15,7 @@ enum class Result {
 class Instance {
 public:
     Instance(std::string name) : Name(name) {}
+    virtual ~Instance(void) {}
 
     virtual u32 GetParamsSize(void) = 0;
     virtual int ParseParams(char * paramsIn, void * paramsOut) = 0;

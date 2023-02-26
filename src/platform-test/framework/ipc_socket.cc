@@ -149,18 +149,14 @@ static void HandleConnectionSocketEvent(short events) {
     } else if (events & POLLIN) {
 
         /* Only handle POLLIN when POLLHUP has not been set in events */
-        char buffer[POLLIN_BUF_LEN] = {};
-        ssize_t bytesRead = read(s_activeConnection, buffer, sizeof(buffer));
-        AssertTrue(bytesRead != -1);
+        char buffer[POLLIN_BUF_LEN + 1] = {};
+        ssize_t bytesRead = read(s_activeConnection, buffer, POLLIN_BUF_LEN);
+        /* If POLLIN was returned without POLLHUP, then there must be outstanding data in the channel */
+        AssertTrue(bytesRead > 0);
+        /* Ensure proper null termination */
+        buffer[bytesRead] = '\0';
 
-        /* Allow for bytesRead to be zero if the connection dropped asynchronously after
-         * poll returned, but before read was called */
-        if (likely(bytesRead > 0)) {
-
-            /* Ensure proper null termination */
-            buffer[sizeof(buffer) - 1] = '\0';
-            /* Pass the buffer to the test runner */
-            TestRunner::OnPollIn(buffer);
-        }
+        /* Pass the buffer to the test runner */
+        TestRunner::OnPollIn(buffer);
     }
 }

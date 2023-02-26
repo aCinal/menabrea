@@ -1,5 +1,6 @@
 
 #include <startup/load_applications.h>
+#include <menabrea/common.h>
 #include <menabrea/log.h>
 #include <menabrea/exception.h>
 #include <dlfcn.h>
@@ -78,42 +79,42 @@ static int LoadLibrary(const char * name, SAppLib * handle) {
 
     /* Work around ISO C standard disallowing casting between
      * function pointers and 'void *' */
-    *(void **)(&handle->GlobalInit) = dlsym(libHandle, APP_LIB_GLOBAL_INIT_SYMBOL);
+    *(void **)(&handle->GlobalInit) = dlsym(libHandle, __APPLICATION_GLOBAL_INIT_SYM);
     error = dlerror();
     if (error) {
 
         LogPrint(ELogSeverityLevel_Error, "Failed to resolve symbol %s in library %s: %s", \
-            APP_LIB_GLOBAL_INIT_SYMBOL, name, error);
+            __APPLICATION_GLOBAL_INIT_SYM, name, error);
         (void) dlclose(libHandle);
         return -1;
     }
 
-    *(void **)(&handle->LocalInit) = dlsym(libHandle, APP_LIB_LOCAL_INIT_SYMBOL);
+    *(void **)(&handle->LocalInit) = dlsym(libHandle, __APPLICATION_LOCAL_INIT_SYM);
     error = dlerror();
     if (error) {
 
         LogPrint(ELogSeverityLevel_Error, "Failed to resolve symbol %s in library %s: %s", \
-            APP_LIB_LOCAL_INIT_SYMBOL, name, error);
+            __APPLICATION_LOCAL_INIT_SYM, name, error);
         (void) dlclose(libHandle);
         return -1;
     }
 
-    *(void **)(&handle->LocalExit) = dlsym(libHandle, APP_LIB_LOCAL_EXIT_SYMBOL);
+    *(void **)(&handle->LocalExit) = dlsym(libHandle, __APPLICATION_LOCAL_EXIT_SYM);
     error = dlerror();
     if (error) {
 
         LogPrint(ELogSeverityLevel_Error, "Failed to resolve symbol %s in library %s: %s", \
-            APP_LIB_LOCAL_EXIT_SYMBOL, name, error);
+            __APPLICATION_LOCAL_EXIT_SYM, name, error);
         (void) dlclose(libHandle);
         return -1;
     }
 
-    *(void **)(&handle->GlobalExit) = dlsym(libHandle, APP_LIB_GLOBAL_EXIT_SYMBOL);
+    *(void **)(&handle->GlobalExit) = dlsym(libHandle, __APPLICATION_GLOBAL_EXIT_SYM);
     error = dlerror();
     if (error) {
 
         LogPrint(ELogSeverityLevel_Error, "Failed to resolve symbol %s in library %s: %s", \
-            APP_LIB_GLOBAL_EXIT_SYMBOL, name, error);
+            __APPLICATION_GLOBAL_EXIT_SYM, name, error);
         (void) dlclose(libHandle);
         return -1;
     }

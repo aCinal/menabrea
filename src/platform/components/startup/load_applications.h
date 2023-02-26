@@ -7,14 +7,6 @@
 #define MAX_APP_LIB_NAME_LEN        PATH_MAX
 #define MAX_APP_LIB_NUM             8
 #define APP_LIB_LIST_ENV            "MENABREA_APP_LIST"
-/* Init before the fork to establish identical view of address spaces */
-#define APP_LIB_GLOBAL_INIT_SYMBOL  "ApplicationGlobalInit"
-/* Per-core initialization */
-#define APP_LIB_LOCAL_INIT_SYMBOL   "ApplicationLocalInit"
-/* Per-core teardown */
-#define APP_LIB_LOCAL_EXIT_SYMBOL   "ApplicationLocalExit"
-/* Global teardown */
-#define APP_LIB_GLOBAL_EXIT_SYMBOL  "ApplicationGlobalExit"
 
 typedef struct SAppLib {
     char Name[MAX_APP_LIB_NAME_LEN];

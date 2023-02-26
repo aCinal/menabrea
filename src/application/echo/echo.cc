@@ -7,7 +7,7 @@
 
 static void EchoService(TMessage message);
 
-extern "C" void ApplicationGlobalInit(void) {
+APPLICATION_GLOBAL_INIT() {
 
     TWorkerId workerId = DeploySimpleParallelWorker("EchoService", ECHO_LOCAL_ID, GetAllCoresMask(), EchoService);
     if (unlikely(WORKER_ID_INVALID == workerId)) {
@@ -16,17 +16,17 @@ extern "C" void ApplicationGlobalInit(void) {
     }
 }
 
-extern "C" void ApplicationLocalInit(int core) {
+APPLICATION_LOCAL_INIT(core) {
 
     (void) core;
 }
 
-extern "C" void ApplicationLocalExit(int core) {
+APPLICATION_LOCAL_EXIT(core) {
 
     (void) core;
 }
 
-extern "C" void ApplicationGlobalExit(void) {
+APPLICATION_GLOBAL_EXIT() {
 
     TerminateWorker(MakeWorkerId(GetOwnNodeId(), ECHO_LOCAL_ID));
 }

@@ -1,3 +1,4 @@
+#include <menabrea/common.h>
 #include <framework/ipc_socket.hh>
 #include <framework/test_runner.hh>
 #include <framework/test_case.hh>
@@ -11,9 +12,7 @@
 #include <cases/periodic_timer/periodic_timer.hh>
 #include <cases/shared_memory/shared_memory.hh>
 
-static void RegisterTestCases(void);
-
-extern "C" void ApplicationGlobalInit(void) {
+APPLICATION_GLOBAL_INIT() {
 
     TestRunner::Init();
     IpcSocket::Init();
@@ -28,19 +27,19 @@ extern "C" void ApplicationGlobalInit(void) {
     TestCase::Register(new TestSharedMemory("TestSharedMemory"));
 }
 
-extern "C" void ApplicationLocalInit(int core) {
+APPLICATION_LOCAL_INIT(core) {
 
     /* No per-core init needed */
     (void) core;
 }
 
-extern "C" void ApplicationLocalExit(int core) {
+APPLICATION_LOCAL_EXIT(core) {
 
     /* No per-core exit needed */
     (void) core;
 }
 
-extern "C" void ApplicationGlobalExit(void) {
+APPLICATION_GLOBAL_EXIT() {
 
     IpcSocket::Teardown();
     TestRunner::Teardown();

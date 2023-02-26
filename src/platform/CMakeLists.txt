@@ -1,9 +1,10 @@
 cmake_minimum_required(VERSION 3.16)
 project(menabrea)
-add_executable(menabrea)
 
 # Turn all warnings into errors
 add_compile_options(-Wall -Werror)
+
+add_executable(menabrea)
 
 include_directories(interface)
 add_subdirectory(components)

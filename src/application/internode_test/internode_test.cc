@@ -21,7 +21,7 @@ struct STimeoutMessage {
     TTimerId Timer;
 };
 
-extern "C" void ApplicationGlobalInit(void) {
+APPLICATION_GLOBAL_INIT() {
 
     TWorkerId workerId = DeploySimpleParallelWorker("internoder", STATIC_WORKER_ID, GetSharedCoreMask(), WorkerBody);
     if (unlikely(WORKER_ID_INVALID == workerId)) {
@@ -60,18 +60,19 @@ extern "C" void ApplicationGlobalInit(void) {
     LogPrint(ELogSeverityLevel_Info, "Successfully initialized the internode test!");
 }
 
-extern "C" void ApplicationLocalInit(int core) {
+APPLICATION_LOCAL_INIT(core) {
 
     (void) core;
 }
 
-extern "C" void ApplicationLocalExit(int core) {
+APPLICATION_LOCAL_EXIT(core) {
 
     (void) core;
 }
 
-extern "C" void ApplicationGlobalExit(void) {
+APPLICATION_GLOBAL_EXIT() {
 
+    TerminateWorker(MakeWorkerId(GetOwnNodeId(), STATIC_WORKER_ID));
 }
 
 static void WorkerBody(TMessage message) {
