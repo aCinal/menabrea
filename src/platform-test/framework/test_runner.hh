@@ -18,4 +18,3 @@ void ExtendTimeout(u64 remainingTime = DEFAULT_TEST_TIMEOUT);
 }
 
 #endif /* PLATFORM_TEST_FRAMEWORK_TEST_RUNNER_HH */
-
