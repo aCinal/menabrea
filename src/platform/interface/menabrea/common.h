@@ -275,6 +275,12 @@ static inline void SpinlockRelease(TSpinlock * lock)                            
 #define __APPLICATION_LOCAL_EXIT_SYM    __MACRO_STRINGIFY(__APPLICATION_LOCAL_EXIT_NAME)
 #define __APPLICATION_GLOBAL_EXIT_SYM   __MACRO_STRINGIFY(__APPLICATION_GLOBAL_EXIT_NAME)
 
+#ifdef __cplusplus
+    #define __APPLICATION_CALLBACK_PREFIX  extern "C" __attribute__((visibility("default")))
+#else
+    #define __APPLICATION_CALLBACK_PREFIX  __attribute__((visibility("default")))
+#endif
+
 /**
  * @brief Definition of the ApplicationGlobalInit symbol
  * @note The application library's global init function will be called by the platform during startup before forking
@@ -282,27 +288,27 @@ static inline void SpinlockRelease(TSpinlock * lock)                            
  *       in a way that allows passing pointers directly between processes by ensuring identical address space layouts in all
  *       processes. All platform APIs can already be used at this point (except where explicitly noted).
  */
-#define APPLICATION_GLOBAL_INIT()       extern "C" __attribute__((visibility("default"))) void __APPLICATION_GLOBAL_INIT_NAME(void)
+#define APPLICATION_GLOBAL_INIT()       __APPLICATION_CALLBACK_PREFIX void __APPLICATION_GLOBAL_INIT_NAME(void)
 
 /**
  * @brief Definition of the ApplicationLocalInit symbol
  * @note The application library's local init will be called once in each dispatcher process during the platform startup. The index of
  *       the core on which execution takes place will be passed to the function via its argument.
  */
-#define APPLICATION_LOCAL_INIT(__core)  extern "C" __attribute__((visibility("default"))) void __APPLICATION_LOCAL_INIT_NAME(int __core)
+#define APPLICATION_LOCAL_INIT(__core)  __APPLICATION_CALLBACK_PREFIX void __APPLICATION_LOCAL_INIT_NAME(int __core)
 
 /**
  * @brief Definition of the ApplicationLocalExit symbol
  * @note The application library's local exit will be called once in each dispatcher process during the platform shutdown. The index of
  *       the core on which execution takes place will be passed to the function via its argument.
  */
-#define APPLICATION_LOCAL_EXIT(__core)  extern "C" __attribute__((visibility("default"))) void __APPLICATION_LOCAL_EXIT_NAME(int __core)
+#define APPLICATION_LOCAL_EXIT(__core)  __APPLICATION_CALLBACK_PREFIX void __APPLICATION_LOCAL_EXIT_NAME(int __core)
 
 /**
  * @brief Definition of the ApplicationGlobalInit symbol
  * @note The application library's global exit will be called by the platform during shutdown after local exits complete in all dispatchers
  *       ("EM cores"). All platform APIs can still be used at this point (except where explicitly noted).
  */
-#define APPLICATION_GLOBAL_EXIT()       extern "C" __attribute__((visibility("default"))) void __APPLICATION_GLOBAL_EXIT_NAME(void)
+#define APPLICATION_GLOBAL_EXIT()       __APPLICATION_CALLBACK_PREFIX void __APPLICATION_GLOBAL_EXIT_NAME(void)
 
 #endif /* PLATFORM_INTERFACE_MENABREA_COMMON_H */

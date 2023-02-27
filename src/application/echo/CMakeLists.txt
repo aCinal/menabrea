@@ -1,6 +1,6 @@
 add_library(echo
     SHARED
-    echo.cc)
+    echo.c)
 
 # Yocto requires versioned libraries
 set_target_properties(echo
