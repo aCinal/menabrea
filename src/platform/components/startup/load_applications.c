@@ -32,7 +32,7 @@ SAppLibsSet * LoadApplicationLibraries(void) {
         /* Tokenize - break at colon */
         char * saveptr = NULL;
         char * token = strtok_r(libList, ":", &saveptr);
-        while (token != NULL) {
+        while (token != NULL && handles->Count < MAX_APP_LIB_NUM) {
 
             LogPrint(ELogSeverityLevel_Debug, "Trying to load library: %s", token);
             if (0 == LoadLibrary(token, &handles->Libs[handles->Count])) {
@@ -40,6 +40,12 @@ SAppLibsSet * LoadApplicationLibraries(void) {
                 handles->Count++;
             }
             token = strtok_r(NULL, ":", &saveptr);
+        }
+
+        if (token != NULL) {
+
+            LogPrint(ELogSeverityLevel_Warning, "Reached maximum number of application libraries: %d. Not loading %s...", \
+                MAX_APP_LIB_NUM, token);
         }
 
         LogPrint(ELogSeverityLevel_Info, "Number of loaded application libraries: %d", \
