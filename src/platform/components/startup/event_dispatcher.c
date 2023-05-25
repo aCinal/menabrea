@@ -201,11 +201,12 @@ static inline void RunMainDispatcher(void) {
 
     /* Set process name */
     SetDispatcherProcessName(0);
-    /* Switch to runtime logging */
-    SetLoggerCallback(RuntimeLoggerCallback);
 
     /* Initialize EM core */
     AssertTrue(EM_OK == em_init_core());
+
+    /* Switch to runtime logging */
+    SetLoggerCallback(RuntimeLoggerCallback);
 
     /* Initialize the platform components */
     RunPlatformGlobalInit();

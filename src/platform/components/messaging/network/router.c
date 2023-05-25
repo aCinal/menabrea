@@ -28,7 +28,6 @@ void RouteInternodeMessage(TMessage message) {
     }
 }
 
-
 em_status_t event_send_device(em_event_t event, em_queue_t queue) {
 
     /* This function overrides a weakly-linked symbol in libemodp.so and gets

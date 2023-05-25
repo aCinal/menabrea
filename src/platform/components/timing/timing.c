@@ -156,7 +156,7 @@ TTimerId DisarmTimer(TTimerId timerId) {
         status = em_tmo_cancel(tmo, &currentEvent);
         switch (status) {
         case EM_OK:
-            /* Timeout cancelled cleanly - timout event will not be sent */
+            /* Timeout cancelled cleanly - timeout event will not be sent */
 
             /* Event must be valid - free it */
             AssertTrue(currentEvent != EM_EVENT_UNDEF);

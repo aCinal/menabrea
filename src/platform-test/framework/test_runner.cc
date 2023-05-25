@@ -69,12 +69,12 @@ static TAtomic64 * s_testRunCounterPtr = nullptr;
 
 void Init(void) {
 
-    s_listenerId = DeploySimpleWorker("TestResultListener", WORKER_ID_INVALID, GetSharedCoreMask(), ListenerBody);
-    AssertTrue(s_listenerId != WORKER_ID_INVALID);
-
     s_testRunCounterPtr = static_cast<TAtomic64 *>(GetMemory(sizeof(TAtomic64)));
     AssertTrue(s_testRunCounterPtr != nullptr);
     Atomic64Init(s_testRunCounterPtr);
+
+    s_listenerId = DeploySimpleWorker("TestResultListener", WORKER_ID_INVALID, GetSharedCoreMask(), ListenerBody);
+    AssertTrue(s_listenerId != WORKER_ID_INVALID);
 }
 
 void Teardown(void) {

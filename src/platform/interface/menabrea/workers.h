@@ -218,6 +218,13 @@ void SetLocalData(void * data);
 TWorkerId GetOwnWorkerId(void);
 
 /**
+ * @brief Find a local worker based on name
+ * @return Corresponding worker ID or WORKER_ID_INVALID if no matching worker found
+ * @see WORKER_ID_INVALID
+ */
+TWorkerId FindLocalWorker(const char * name);
+
+/**
  * @brief For non-parallel workers, give a hint to the scheduler that atomic processing is done
  *        and the worker can be scheduled again in parallel
  */

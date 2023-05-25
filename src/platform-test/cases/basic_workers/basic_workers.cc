@@ -65,6 +65,12 @@ int TestBasicWorkers::StartTest(void * args) {
     case 9:
         return RunSubcase9();
 
+    case 10:
+        return RunSubcase10();
+
+    case 11:
+        return RunSubcase11();
+
     default:
         LogPrint(ELogSeverityLevel_Error, "Invalid subcase %d for test case '%s'", \
             params->Subcase, this->GetName());
@@ -294,10 +300,59 @@ int TestBasicWorkers::RunSubcase9(void) {
         TestRunner::ReportTestResult(TestCase::Result::Failure, \
             "Unexpectedly succeeded at deploying worker 0x%x despite user init failure", \
             workerId);
-        return -1;
+        return 0;
     }
 
     TestRunner::ReportTestResult(TestCase::Result::Success);
+    return 0;
+}
+
+int TestBasicWorkers::RunSubcase10(void) {
+
+    const char workerName[] = "Subcase10Worker";
+    TWorkerId workerId = DeploySimpleWorker(workerName, WORKER_ID_INVALID, GetAllCoresMask(), DummyBody);
+    if (unlikely(WORKER_ID_INVALID == workerId)) {
+
+        LogPrint(ELogSeverityLevel_Error, "Failed to deploy worker in subcase 10 of test '%s'", \
+            this->GetName());
+        return -1;
+    }
+
+    /* Try looking up the worker based on its name */
+    TWorkerId resolvedId = FindLocalWorker(workerName);
+    if (unlikely(resolvedId != workerId)) {
+
+        LogPrint(ELogSeverityLevel_Error, \
+            "Failed to look up worker '%s' based on name during test '%s'. Expected ID: 0x%x, FindLocalWorker returned: 0x%x", \
+            workerName, this->GetName(), workerId, resolvedId);
+        TestRunner::ReportTestResult(TestCase::Result::Failure, \
+            "Failed to look up worker '%s' based on name. Expected ID: 0x%x, FindLocalWorker returned: 0x%x", \
+            workerName, workerId, resolvedId);
+        return 0;
+    }
+
+    TerminateWorker(workerId);
+    TestRunner::ReportTestResult(TestCase::Result::Success, " ");
+    return 0;
+}
+
+int TestBasicWorkers::RunSubcase11(void) {
+
+    const char platformEoName[] = "timing_daemon";
+    /* Assert platform behaves gracefully when attempting to look up internal EO by name */
+    TWorkerId resolvedId = FindLocalWorker(platformEoName);
+    if (unlikely(resolvedId != WORKER_ID_INVALID)) {
+
+        LogPrint(ELogSeverityLevel_Error, \
+            "Unexpectedly succeeded at looking up platform-internal EO '%s' during test '%s'. FindLocalWorker returned: 0x%x", \
+            platformEoName, this->GetName(), resolvedId);
+        TestRunner::ReportTestResult(TestCase::Result::Failure, \
+            "Unexpectedly succeeded at looking up platform-internal EO '%s'. FindLocalWorker returned: 0x%x", \
+            platformEoName, resolvedId);
+        return 0;
+    }
+
+    TestRunner::ReportTestResult(TestCase::Result::Success, " ");
     return 0;
 }
 
@@ -332,4 +387,3 @@ static void DummyBody(TMessage message) {
 
     DestroyMessage(message);
 }
-

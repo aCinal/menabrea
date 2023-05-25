@@ -366,7 +366,7 @@ static void SigabrtHandler(siginfo_t * siginfo, ucontext_t * ucontext) {
 
 static void SigchldHandler(siginfo_t * siginfo) {
 
-    /* Log the event - note that we assume SA_NOCLDSTOP as passed to sigaction,
+    /* Log the event - note that we assume SA_NOCLDSTOP was passed to sigaction,
      * so that we only receive SIGCHLD on termination of children */
     switch (siginfo->si_code) {
     case CLD_EXITED:

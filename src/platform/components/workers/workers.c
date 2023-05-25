@@ -266,6 +266,27 @@ TWorkerId GetOwnWorkerId(void) {
     return context->WorkerId;
 }
 
+TWorkerId FindLocalWorker(const char * name) {
+
+    em_eo_t eo = em_eo_find(name);
+    if (unlikely(EM_EO_UNDEF == eo)) {
+
+        /* No EO found */
+        return WORKER_ID_INVALID;
+    }
+
+    SWorkerContext * context = (SWorkerContext *) em_eo_get_context(eo);
+    if (unlikely(NULL == context)) {
+
+        /* Only platform-internal EOs have no context, raise soft exception */
+        RaiseException(EExceptionFatality_NonFatal, \
+            "Tried looking up non-worker EO '%s'", name);
+        return WORKER_ID_INVALID;
+    }
+
+    return context->WorkerId;
+}
+
 void EndAtomicContext(void) {
 
     em_eo_t self = em_eo_current();

@@ -18,6 +18,8 @@
         { "name": "TestBasicWorkers", "params": { "subcase": 7 } },
         { "name": "TestBasicWorkers", "params": { "subcase": 8 } },
         { "name": "TestBasicWorkers", "params": { "subcase": 9 } },
+        { "name": "TestBasicWorkers", "params": { "subcase": 10 } },
+        { "name": "TestBasicWorkers", "params": { "subcase": 11 } },
         { "name": "TestMessageBuffering", "params": { "overload": 20 } },
         { "name": "TestMessagingPerformance", "params": { "echoId": "0x1700", "payloadSize": 256, "rounds": 16, "burst": 16, "period": 15000 } },
         { "name": "TestOneshotTimer", "params": { "maxError": 30000, "expiration": 5000, "messages": 5 } },
