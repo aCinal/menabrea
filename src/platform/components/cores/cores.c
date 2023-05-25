@@ -1,6 +1,11 @@
 #include <menabrea/cores.h>
 #include <event_machine.h>
 
+int GetCoreCount(void) {
+
+    return em_core_count();
+}
+
 int GetCurrentCore(void) {
 
     return em_core_id();

@@ -7,6 +7,12 @@ extern "C" {
 #endif
 
 /**
+ * @brief Return the total number of cores available in the system
+ * @return Number of cores
+ */
+int GetCoreCount(void);
+
+/**
  * @brief Return the zero-based index of the current core
  * @return Index of the current core
  */
