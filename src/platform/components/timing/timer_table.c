@@ -49,7 +49,7 @@ void TimerTableInit(void) {
     /* Set up the pointers and initialize the table entries */
     for (TTimerId i = 0; i < MAX_TIMER_COUNT; i++) {
 
-        s_timerTable[i] = (STimerContext *)((u8*) tableBase + i * sizeof(STimerContext));
+        s_timerTable[i] = (STimerContext *)((u8*) tableBase + i * entrySize);
         /* Initialize the timer IDs once at startup */
         s_timerTable[i]->TimerId = i;
         SpinlockInit(&s_timerTable[i]->Lock);

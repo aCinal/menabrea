@@ -8,7 +8,7 @@ typedef struct SMemoryConfig {
     em_pool_cfg_t PoolConfig;
 } SMemoryConfig;
 
-#define APP_MEMORY_EVENT_POOL  ( (em_pool_t) 12 )
+#define RUNTIME_SHMEM_EVENT_POOL  ( (em_pool_t) 12 )
 
 void MemorySetup(SMemoryConfig * config);
 void MemoryTeardown(void);

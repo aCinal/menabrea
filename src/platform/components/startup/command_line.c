@@ -53,7 +53,7 @@ SStartupParams * ParseCommandLine(int argc, char **argv) {
 
         case 2:
             AssertTrue(0 == strcmp("memoryPoolConfig", longOptions[optionIndex].name));
-            LogPrint(ELogSeverityLevel_Debug, "Parsing the memory pool config...");
+            LogPrint(ELogSeverityLevel_Debug, "Parsing the runtime shared memory pool config...");
             ParsePoolConfig(optarg, &params->MemoryPoolConfig);
             PrintPoolConfig(&params->MemoryPoolConfig);
             break;

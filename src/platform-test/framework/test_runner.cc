@@ -69,7 +69,8 @@ static TAtomic64 * s_testRunCounterPtr = nullptr;
 
 void Init(void) {
 
-    s_testRunCounterPtr = static_cast<TAtomic64 *>(GetMemory(sizeof(TAtomic64)));
+    s_testRunCounterPtr = \
+        static_cast<TAtomic64 *>(GetMemory(sizeof(TAtomic64), EMemoryPool_SharedInit));
     AssertTrue(s_testRunCounterPtr != nullptr);
     Atomic64Init(s_testRunCounterPtr);
 
@@ -131,14 +132,22 @@ void OnPollHup(void) {
 void ReportTestResult(TestCase::Result result, const char * extra, ...) {
 
     AssertTrue(extra != nullptr);
+
+    u64 currentTestRun = CurrentTestRunId();
     /* Create a result message */
     TMessage resultMessage = CreateMessage(TEST_RESULT_MSG_ID, sizeof(STestResult));
-    /* Don't leave the system in an inconsistent state - crash immediately if report
-     * allocation fails */
-    AssertTrue(resultMessage != MESSAGE_INVALID);
+    /* This API is only called from the test code at a point when the test case timeout
+     * timer is already ticking, and so we allow the allocation of the result report to
+     * fail - the test will time out normally. */
+    if (unlikely(resultMessage == MESSAGE_INVALID)) {
+
+        LOG_ERROR("Failed to create the test result report for test run %ld", currentTestRun);
+        return;
+    }
+
     /* Fill in the payload */
     STestResult * payload = static_cast<STestResult *>(GetMessagePayload(resultMessage));
-    payload->TestRunId = CurrentTestRunId();
+    payload->TestRunId = currentTestRun;
     payload->Result = result;
     payload->Core = GetCurrentCore();
     va_list args;
@@ -226,7 +235,7 @@ static void HandleCommandRun(const char * testCaseName, char * testArgsString) {
         }
 
         /* Allocate memory for the parameters */
-        testParams = GetMemory(paramsSize);
+        testParams = GetMemory(paramsSize, EMemoryPool_Local);
         if (unlikely(testParams == nullptr)) {
 
             LOG_ERROR("%s(): Failed to allocate %d bytes for the parameters of test case '%s'", \

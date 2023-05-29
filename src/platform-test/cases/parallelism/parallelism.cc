@@ -76,7 +76,8 @@ int TestParallelism::StartTest(void * args) {
     TestParallelismParams * params = static_cast<TestParallelismParams *>(args);
 
     /* Allocate the context shared between the workers */
-    TestSharedData * sharedMem = static_cast<TestSharedData *>(GetMemory(sizeof(TestSharedData)));
+    TestSharedData * sharedMem = \
+        static_cast<TestSharedData *>(GetMemory(sizeof(TestSharedData), EMemoryPool_SharedRuntime));
     if (sharedMem == nullptr) {
 
         LogPrint(ELogSeverityLevel_Error, "Failed to allocate the shared memory for test '%s'", \
@@ -105,7 +106,7 @@ int TestParallelism::StartTest(void * args) {
     sharedMem->UseAtomics = params->UseAtomics;
     sharedMem->UseSpinlock = params->UseSpinlock;
 
-    LogPrint(ELogSeverityLevel_Info, "Deploying %d workers that will compete over a shared resource...", \
+    LogPrint(ELogSeverityLevel_Info, "Deploying %d worker(s) that will compete over a shared resource...", \
         params->WorkerCount);
     /* Deploy the workers */
     SWorkerConfig workerConfig = {
@@ -120,7 +121,8 @@ int TestParallelism::StartTest(void * args) {
     for (u32 i = 0; i < params->WorkerCount; i++) {
 
         /* Allocate private data for each worker */
-        TestWorkerData * workerPrivateData = static_cast<TestWorkerData *>(GetMemory(sizeof(TestWorkerData)));
+        TestWorkerData * workerPrivateData = \
+            static_cast<TestWorkerData *>(GetMemory(sizeof(TestWorkerData), EMemoryPool_SharedRuntime));
         if (unlikely(workerPrivateData == nullptr)) {
 
             LogPrint(ELogSeverityLevel_Error, "Failed to allocate private data for worker %d in test '%s'", \

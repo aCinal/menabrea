@@ -110,7 +110,7 @@ int TestMessagingPerformance::StartTest(void * arg) {
     TestMessagingPerformanceParams * params = static_cast<TestMessagingPerformanceParams *>(arg);
 
     PerfTestShmem * testSharedMemory = \
-        static_cast<PerfTestShmem *>(GetMemory(sizeof(PerfTestShmem)));
+        static_cast<PerfTestShmem *>(GetMemory(sizeof(PerfTestShmem), EMemoryPool_SharedRuntime));
     if (unlikely(testSharedMemory == nullptr)) {
 
         LogPrint(ELogSeverityLevel_Error, "Failed to allocate shared memory for test '%s'", \

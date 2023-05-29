@@ -55,7 +55,8 @@ int TestPeriodicTimer::StartTest(void * args) {
     TestPeriodicTimerParams * params = static_cast<TestPeriodicTimerParams *>(args);
 
     /* Allocate shared memory for the worker's use*/
-    TestPeriodicTimerShmem * shmem = static_cast<TestPeriodicTimerShmem *>(GetMemory(sizeof(TestPeriodicTimerShmem)));
+    TestPeriodicTimerShmem * shmem = \
+        static_cast<TestPeriodicTimerShmem *>(GetMemory(sizeof(TestPeriodicTimerShmem), EMemoryPool_SharedRuntime));
     if (unlikely(shmem == nullptr)) {
 
         LogPrint(ELogSeverityLevel_Error, "Failed to allocate shared memory for test '%s'", this->GetName());

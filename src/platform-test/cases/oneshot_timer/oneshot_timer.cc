@@ -58,7 +58,8 @@ int TestOneshotTimer::StartTest(void * args) {
     TestOneshotTimerParams * params = static_cast<TestOneshotTimerParams *>(args);
 
     /* Allocate shared memory for the worker's use*/
-    TestOneshotTimerShmem * shmem = static_cast<TestOneshotTimerShmem *>(GetMemory(sizeof(TestOneshotTimerShmem)));
+    TestOneshotTimerShmem * shmem = \
+        static_cast<TestOneshotTimerShmem *>(GetMemory(sizeof(TestOneshotTimerShmem), EMemoryPool_SharedRuntime));
     if (unlikely(shmem == nullptr)) {
 
         LogPrint(ELogSeverityLevel_Error, "Failed to allocate shared memory for test '%s'", this->GetName());
