@@ -1,5 +1,5 @@
-#define _GNU_SOURCE
 #include <startup/command_line.h>
+#include <startup/cpus.h>
 #include <startup/open_data_plane_startup.h>
 #include <startup/event_machine_startup.h>
 #include <startup/load_applications.h>
@@ -8,16 +8,12 @@
 #include <log/startup_logger.h>
 #include <exception/signal_handlers.h>
 #include <menabrea/log.h>
-#include <menabrea/exception.h>
-#include <sched.h>
-#include <sys/sysinfo.h>
 #include <string.h>
 #include <stdlib.h>
 
 #define LOG_VERBOSITY_ENV  "LOG_VERBOSE"
 
 static void InitializeLogger(void);
-static int ClaimCpus(void);
 static em_pool_cfg_t TranslateToEmPoolConfig(SPoolConfig * config, em_event_type_t eventType);
 
 int main(int argc, char **argv) {
@@ -28,8 +24,10 @@ int main(int argc, char **argv) {
     /* Parse command line arguments */
     SStartupParams * startupParams = ParseCommandLine(argc, argv);
 
-    /* Allow running on all cores */
-    int numOfCpus = ClaimCpus();
+    /* Allow running on all cores temporarily - ODP likes to verify CPU mask
+     * configuration against the output of sched_getaffinity(), so during
+     * startup make it so that it returns all available cores */
+    int numOfCpus = ClaimAllCpus();
 
     /* Configure and initialize the ODP layer */
     SOdpStartupConfig odpStartupConfig = {
@@ -92,22 +90,6 @@ static void InitializeLogger(void) {
     bool verbose = verbosity && 0 == strcmp(verbosity, "1");
     LogInit(verbose);
     SetLoggerCallback(StartupLoggerCallback);
-}
-
-static int ClaimCpus(void) {
-
-    cpu_set_t mask;
-    CPU_ZERO(&mask);
-    /* Enable running on all cores */
-    int cores = get_nprocs();
-    for (int i = 0; i < cores; i++) {
-
-        CPU_SET(i, &mask);
-    }
-
-    AssertTrue(0 == sched_setaffinity(0, sizeof(cpu_set_t), &mask));
-
-    return cores;
 }
 
 static em_pool_cfg_t TranslateToEmPoolConfig(SPoolConfig * config, em_event_type_t eventType) {

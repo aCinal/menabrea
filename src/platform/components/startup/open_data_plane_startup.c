@@ -1,5 +1,6 @@
 
 #include <startup/open_data_plane_startup.h>
+#include <startup/cpus.h>
 #include <menabrea/log.h>
 #include <menabrea/exception.h>
 
@@ -17,9 +18,9 @@ odp_instance_t InitializeOpenDataPlane(SOdpStartupConfig * config) {
         odp_cpumask_set(&workerMask, i);
     }
 
-    odp_cpumask_t control_mask;
-    odp_cpumask_zero(&control_mask);
-    odp_cpumask_set(&control_mask, 0);
+    odp_cpumask_t controlMask;
+    odp_cpumask_zero(&controlMask);
+    odp_cpumask_set(&controlMask, 0);
 
     odp_init_t initParams;
     /* Set default param values */
@@ -28,8 +29,8 @@ odp_instance_t InitializeOpenDataPlane(SOdpStartupConfig * config) {
     /* Assign roles to the cores */
     initParams.num_worker = odp_cpumask_count(&workerMask);
     initParams.worker_cpus = &workerMask;
-    initParams.num_control = odp_cpumask_count(&control_mask);
-    initParams.control_cpus = &control_mask;
+    initParams.num_control = odp_cpumask_count(&controlMask);
+    initParams.control_cpus = &controlMask;
     initParams.log_fn = OdpLogger;
 
     /* Set unused features to optimize performance */
@@ -46,6 +47,12 @@ odp_instance_t InitializeOpenDataPlane(SOdpStartupConfig * config) {
 
     odp_instance_t instance;
     AssertTrue(0 == odp_init_global(&instance, &initParams, NULL));
+    /* Pin the current process to core 0 temporarily - ODP relies on
+     * sched_getcpu() to return a unique CPU id - if we happen to run
+     * on a different core than 0 at the point of that call, then two
+     * ODP threads (and later EM cores) will map to the same CPU in
+     * ODP bookkeeping */
+    PinCurrentProcessToCpu(0);
     AssertTrue(0 == odp_init_local(instance, ODP_THREAD_CONTROL));
 
     /* Configure the scheduler */

@@ -1,5 +1,6 @@
 set(SOURCES
     main.c
+    cpus.c
     command_line.c
     open_data_plane_startup.c
     event_machine_startup.c

@@ -1,5 +1,5 @@
-#define _GNU_SOURCE
 #include <startup/event_dispatcher.h>
+#include <startup/cpus.h>
 #include <cores/queue_groups.h>
 #include <exception/signal_handlers.h>
 #include <input/input.h>
@@ -11,8 +11,6 @@
 #include <menabrea/log.h>
 #include <menabrea/common.h>
 #include <string.h>
-#include <sched.h>
-#include <sys/sysinfo.h>
 #include <sys/prctl.h>
 #include <sys/wait.h>
 #include <errno.h>
@@ -201,6 +199,8 @@ static inline void RunMainDispatcher(void) {
 
     /* Set process name */
     SetDispatcherProcessName(0);
+    /* Explicitly (and likely redundantly) pin the main dispatcher to core 0 */
+    PinCurrentProcessToCpu(0);
 
     /* Initialize EM core */
     AssertTrue(EM_OK == em_init_core());
@@ -367,12 +367,8 @@ static inline void ChildDispatcherInit(int physicalCore) {
 
     /* Set process name */
     SetDispatcherProcessName(physicalCore);
-
     /* Migrate to own core */
-    cpu_set_t cpuMask;
-    CPU_ZERO(&cpuMask);
-    CPU_SET(physicalCore, &cpuMask);
-    AssertTrue(0 == sched_setaffinity(0, sizeof(cpu_set_t), &cpuMask));
+    PinCurrentProcessToCpu(physicalCore);
 
     /* Initialize ODP locally */
     AssertTrue(0 == odp_init_local(s_platformConfig.OdpInstance, \

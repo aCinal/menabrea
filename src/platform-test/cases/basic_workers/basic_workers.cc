@@ -95,7 +95,7 @@ int TestBasicWorkers::RunSubcase0(void) {
     }
 
     TerminateWorker(workerId);
-    TestRunner::ReportTestResult(TestCase::Result::Success, " ");
+    TestRunner::ReportTestResult(TestCase::Result::Success);
     return 0;
 }
 
@@ -117,7 +117,7 @@ int TestBasicWorkers::RunSubcase1(void) {
     TerminateWorker(workerId);
     TerminateWorker(workerId);
 
-    TestRunner::ReportTestResult(TestCase::Result::Success, " ");
+    TestRunner::ReportTestResult(TestCase::Result::Success);
     return 0;
 }
 
@@ -138,7 +138,7 @@ int TestBasicWorkers::RunSubcase2(void) {
         return -1;
     }
 
-    TestRunner::ReportTestResult(TestCase::Result::Success, " ");
+    TestRunner::ReportTestResult(TestCase::Result::Success);
     return 0;
 }
 
@@ -332,7 +332,7 @@ int TestBasicWorkers::RunSubcase10(void) {
     }
 
     TerminateWorker(workerId);
-    TestRunner::ReportTestResult(TestCase::Result::Success, " ");
+    TestRunner::ReportTestResult(TestCase::Result::Success);
     return 0;
 }
 
@@ -352,7 +352,7 @@ int TestBasicWorkers::RunSubcase11(void) {
         return 0;
     }
 
-    TestRunner::ReportTestResult(TestCase::Result::Success, " ");
+    TestRunner::ReportTestResult(TestCase::Result::Success);
     return 0;
 }
 

@@ -14,7 +14,6 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-
 static int CreateListeningSocket(const char * name);
 static void UdsInputPollCallback(void);
 static void HandleConnectionSocketEvent(short events);
