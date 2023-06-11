@@ -17,13 +17,15 @@ typedef struct STimerIdFifo {
 } STimerIdFifo;
 
 static STimerIdFifo * s_idFifo;
-static STimerContext * s_timerTable[MAX_TIMER_COUNT];
+static STimerContext * s_timerTable;
 
 void TimerTableInit(void) {
 
-    /* Align with cache line */
-    size_t entrySize = ENV_CACHE_LINE_SIZE_ROUNDUP(sizeof(STimerContext));
+    /* Assert each timer table entry is padded to cache line size */
+    AssertTrue(sizeof(STimerContext) == ENV_CACHE_LINE_SIZE_ROUNDUP(sizeof(STimerContext)));
+    size_t entrySize = sizeof(STimerContext);
     size_t tableSize = entrySize * MAX_TIMER_COUNT;
+    /* Align the FIFO descriptor with cache line */
     size_t idFifoSize = ENV_CACHE_LINE_SIZE_ROUNDUP(sizeof(STimerIdFifo));
     size_t totalAllocationSize = idFifoSize + tableSize;
     LogPrint(ELogSeverityLevel_Info, \
@@ -46,14 +48,14 @@ void TimerTableInit(void) {
     }
 
     void * tableBase = (u8 *) startAddr + idFifoSize;
-    /* Set up the pointers and initialize the table entries */
+    s_timerTable = tableBase;
+    /* Initialize the table entries */
     for (TTimerId i = 0; i < MAX_TIMER_COUNT; i++) {
 
-        s_timerTable[i] = (STimerContext *)((u8*) tableBase + i * entrySize);
         /* Initialize the timer IDs once at startup */
-        s_timerTable[i]->TimerId = i;
-        SpinlockInit(&s_timerTable[i]->Lock);
-        ResetContext(s_timerTable[i]);
+        s_timerTable[i].TimerId = i;
+        SpinlockInit(&s_timerTable[i].Lock);
+        ResetContext(&s_timerTable[i]);
     }
 }
 
@@ -61,11 +63,6 @@ void TimerTableTeardown(void) {
 
     /* Recover the start address of the shared memory */
     void * startAddr = s_idFifo;
-    for (TTimerId i = 0; i < MAX_TIMER_COUNT; i++) {
-
-        /* Unset all the pointers */
-        s_timerTable[i] = NULL;
-    }
     /* Free the shared memory */
     env_shared_free(startAddr);
 }
@@ -81,10 +78,10 @@ STimerContext * ReserveTimerContext(void) {
 
     LockTimerTableEntry(id);
     /* Assert consistency between the timer table and the timer ID FIFO */
-    AssertTrue(s_timerTable[id]->State == ETimerState_Invalid);
-    s_timerTable[id]->State = ETimerState_Idle;
+    AssertTrue(s_timerTable[id].State == ETimerState_Invalid);
+    s_timerTable[id].State = ETimerState_Idle;
     UnlockTimerTableEntry(id);
-    return s_timerTable[id];
+    return &s_timerTable[id];
 }
 
 void ReleaseTimerContext(TTimerId timerId) {
@@ -92,7 +89,7 @@ void ReleaseTimerContext(TTimerId timerId) {
     /* Caller must ensure synchronization */
 
     AssertTrue(timerId < MAX_TIMER_COUNT);
-    ResetContext(s_timerTable[timerId]);
+    ResetContext(&s_timerTable[timerId]);
     ReleaseTimerId(timerId);
 }
 
@@ -100,20 +97,20 @@ STimerContext * FetchTimerContext(TTimerId timerId) {
 
     AssertTrue(timerId < MAX_TIMER_COUNT);
     /* Do a sanity check each time a timer context is fetched */
-    AssertTrue(s_timerTable[timerId]->TimerId == timerId);
-    return s_timerTable[timerId];
+    AssertTrue(s_timerTable[timerId].TimerId == timerId);
+    return &s_timerTable[timerId];
 }
 
 void LockTimerTableEntry(TTimerId timerId) {
 
     AssertTrue(timerId < MAX_TIMER_COUNT);
-    SpinlockAcquire(&s_timerTable[timerId]->Lock);
+    SpinlockAcquire(&s_timerTable[timerId].Lock);
 }
 
 void UnlockTimerTableEntry(TTimerId timerId) {
 
     AssertTrue(timerId < MAX_TIMER_COUNT);
-    SpinlockRelease(&s_timerTable[timerId]->Lock);
+    SpinlockRelease(&s_timerTable[timerId].Lock);
 }
 
 static void ResetContext(STimerContext * context) {

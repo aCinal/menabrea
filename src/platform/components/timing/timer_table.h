@@ -17,16 +17,18 @@ typedef enum ETimerState {
 } ETimerState;
 
 typedef struct STimerContext {
-    char Name[MAX_TIMER_NAME_LEN];
     em_tmo_t Tmo;
     TSpinlock Lock;
-    TMessage Message;
-    TWorkerId Receiver;
     em_timer_tick_t Period;
     em_timer_tick_t PreviousExpiration;
     u32 SkipEvents;
+    TMessage Message;
+    TWorkerId Receiver;
     TTimerId TimerId;
     ETimerState State;
+    char Name[MAX_TIMER_NAME_LEN];
+    /* Pad to have the size be a multiple of the cache line size */
+    void * _pad[0] ENV_CACHE_LINE_ALIGNED;
 } STimerContext;
 
 void TimerTableInit(void);
