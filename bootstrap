@@ -1,34 +1,49 @@
 #!/usr/bin/env bash
 
-YOCTO_LTS_BRANCH=kirkstone
+YOCTO_BRANCH=mickledore
 
-echo "Cloning the poky reference distribution..." &&
-# Fetch the reference Yocto distribution (from long term support branch)
-git clone git://git.yoctoproject.org/poky -b ${YOCTO_LTS_BRANCH} layers/poky &&
-echo "poky cloned successfully" &&
+# Fetch the reference Yocto distribution
+POKY_DIR=layers/poky
+if ! [ -d ${POKY_DIR} ]; then
+    echo "Cloning the poky reference distribution..." &&
+    git clone git://git.yoctoproject.org/poky -b ${YOCTO_BRANCH} ${POKY_DIR} &&
+    echo "poky cloned successfully"
+else
+    echo "Skipped fetching poky. ${POKY_DIR} already exists"
+fi
 
 # Fetch meta-openembedded
-echo "Cloning the OpenEmbedded common metalayers..." &&
-git clone git://git.openembedded.org/meta-openembedded -b ${YOCTO_LTS_BRANCH} layers/meta-openembedded &&
-echo "meta-openembedded cloned successfully..." &&
+META_OE_DIR=layers/meta-openembedded
+if ! [ -d ${META_OE_DIR} ]; then
+    echo "Cloning the OpenEmbedded common metalayers..." &&
+    git clone git://git.openembedded.org/meta-openembedded -b ${YOCTO_BRANCH} ${META_OE_DIR} &&
+    echo "meta-openembedded cloned successfully..."
+else
+    echo "Skipped fetching meta-openembedded. ${META_OE_DIR} already exists"
+fi
 
-echo "Cloning the Raspberry Pi BSP metalayer..." &&
 # Fetch the Raspberry Pi board support metalayer
-git clone git://git.yoctoproject.org/meta-raspberrypi -b ${YOCTO_LTS_BRANCH} layers/meta-raspberrypi &&
-echo "meta-raspberrypi cloned successfully" &&
+META_RPI_DIR=layers/meta-raspberrypi
+if ! [ -d ${META_RPI_DIR} ]; then
+    echo "Cloning the Raspberry Pi BSP metalayer..." &&
+    git clone git://git.yoctoproject.org/meta-raspberrypi -b ${YOCTO_BRANCH} ${META_RPI_DIR} &&
+    echo "meta-raspberrypi cloned successfully"
+else
+    echo "Skipped fetching meta-raspberrypi. ${META_RPI_DIR} already exists"
+fi
 
 # Set up the environment (allows calling bitbake-layers and cd's to build/)
 . initialize &&
 
 # Add common OpenEmbedded layers
 echo "Adding common OpenEmbedded layers..." &&
-bitbake-layers add-layer ../layers/meta-openembedded/meta-oe &&
-bitbake-layers add-layer ../layers/meta-openembedded/meta-python &&
-bitbake-layers add-layer ../layers/meta-openembedded/meta-networking &&
+bitbake-layers add-layer ../${META_OE_DIR}/meta-oe &&
+bitbake-layers add-layer ../${META_OE_DIR}/meta-python &&
+bitbake-layers add-layer ../${META_OE_DIR}/meta-networking &&
 
 # Add Raspberry Pi BSP layer
 echo "Adding Raspberry Pi BSP layer..." &&
-bitbake-layers add-layer ../layers/meta-raspberrypi &&
+bitbake-layers add-layer ../${META_RPI_DIR} &&
 
 # Add OpenEM/ODP layer
 echo "Adding OpenEventMachine/OpenDataPlane layer..." &&

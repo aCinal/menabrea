@@ -80,12 +80,12 @@
     },
 
     "node_id": 1,
-    "network_if": "eth0",
+    "network_if": "end0",
     "pktio_bufs_kilo": 10,
 
     "environment": {
         "EM_CONFIG_FILE": null,
-        "MENABREA_APP_LIST": "libregression.so.1.0.0",
+        "MENABREA_APP_LIST": "libregression.so.1.0.0:libecho.so.1.0.0",
         "LOG_VERBOSE": 1
     }
 }

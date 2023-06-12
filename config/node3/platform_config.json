@@ -80,7 +80,7 @@
     },
 
     "node_id": 3,
-    "network_if": "eth0",
+    "network_if": "end0",
     "pktio_bufs_kilo": 10,
 
     "environment": {
