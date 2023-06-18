@@ -1,0 +1,25 @@
+diff --git a/src/add-ons/event_timer/event_machine_timer.c b/src/add-ons/event_timer/event_machine_timer.c
+index ecd53f8..8da0e59 100644
+--- a/src/add-ons/event_timer/event_machine_timer.c
++++ b/src/add-ons/event_timer/event_machine_timer.c
+@@ -164,8 +164,9 @@ void em_timer_attr_init(em_timer_attr_t *tmr_attr)
+ 	if (unlikely(EM_CHECK_LEVEL > 0 && tmr_attr == NULL))
+ 		return; /* just ignore NULL here */
+ 
+-	/* strategy: first put default resolution, then validate based on that */
+-	tmr_attr->resparam.res_ns = EM_ODP_TIMER_RESOL_DEF_NS;
++	TMR_DBG_PRINT("em_timer_attr_init patch in effect\n");
++
++	/* strategy: first query for max resolution supported by ODP */
+ 	tmr_attr->resparam.res_hz = 0;
+ 	tmr_attr->resparam.clk_src = EM_TIMER_CLKSRC_DEFAULT;
+ 	tmr_attr->flags = EM_TIMER_FLAG_DEFAULT;
+@@ -191,7 +192,7 @@ void em_timer_attr_init(em_timer_attr_t *tmr_attr)
+ 	}
+ 
+ 	memset(&odp_res_capa, 0, sizeof(odp_timer_res_capability_t));
+-	odp_res_capa.res_ns = tmr_attr->resparam.res_ns;
++	odp_res_capa.res_ns = tmr_attr->resparam.res_ns = odp_capa.highest_res_ns;
+ 	err = odp_timer_res_capability(odp_clksrc, &odp_res_capa);
+ 	if (unlikely(err)) {
+ 		INTERNAL_ERROR(EM_ERR_LIB_FAILED, EM_ESCOPE_TIMER_ATTR_INIT,

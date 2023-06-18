@@ -21,19 +21,7 @@ TMessage CreateMessage(TMessageId msgId, u32 payloadSize) {
 
 TMessage CopyMessage(TMessage message) {
 
-    TMessageId msgId = GetMessageId(message);
-    u32 payloadSize = GetMessagePayloadSize(message);
-
-    TMessage copy = CreateMessage(msgId, payloadSize);
-    if (likely(copy != MESSAGE_INVALID)) {
-
-        /* Copy the payload */
-        void * originalPayload = GetMessagePayload(message);
-        void * copyPayload = GetMessagePayload(copy);
-        (void) memcpy(copyPayload, originalPayload, payloadSize);
-    }
-
-    return copy;
+    return em_event_clone(message, EM_POOL_UNDEF);
 }
 
 void * GetMessagePayload(TMessage message) {

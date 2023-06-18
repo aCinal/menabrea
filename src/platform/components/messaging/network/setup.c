@@ -1,5 +1,6 @@
 #include <messaging/network/mac_spoofing.h>
 #include <messaging/network/pktio.h>
+#include <messaging/network/router.h>
 #include <messaging/network/setup.h>
 #include <messaging/network/translation.h>
 #include <messaging/router.h>
@@ -33,6 +34,9 @@ void MessagingNetworkInit(SNetworkingConfig * config) {
 
     /* Initialize pktio */
     PktioInit(config->DeviceName, config->PktioBufs);
+
+    /* Initialize the TX path */
+    RouterInit();
 
     /* Register an input poll callback */
     RegisterInputPolling(NetworkInputPoll, GetAllCoresMask());

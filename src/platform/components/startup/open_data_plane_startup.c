@@ -39,7 +39,6 @@ odp_instance_t InitializeOpenDataPlane(SOdpStartupConfig * config) {
     initParams.not_used.feat.crypto = 1;    /* Crypto APIs */
     initParams.not_used.feat.dma = 1;       /* DMA APIs */
     initParams.not_used.feat.ipsec = 1;     /* IPsec APIs */
-    initParams.not_used.feat.stash = 1;     /* Stash APIs */
     initParams.not_used.feat.tm = 1;        /* Traffic manager APIs */
 
     /* Set the memory model */

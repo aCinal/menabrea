@@ -4,14 +4,14 @@ LICENSE = "MIT"
 
 SRC_URI = " \
     git://github.com/openeventmachine/em-odp.git;branch=master;protocol=https \
-    file://0001-em-odp-fix-maybe-uninitialized-error.patch \
+    file://0001-em-odp-fix-em-timer-attr-init.patch \
     "
-SRCREV = "f3de2d2f3235e37c6f13f839b8024ba97c5b5ef2"
+SRCREV = "8ad178851cc8dd01e5387336b58f5d6940aef8a3"
 
 # Git repositories are cloned to ${WORKDIR}/git by default
 S = "${WORKDIR}/git"
 
-LIC_FILES_CHKSUM = "file://README;md5=e9afc838f39bc2d3bd037562fab7e6e0"
+LIC_FILES_CHKSUM = "file://README;md5=199ef336df89a30dc74d11cdcad6024f"
 
 DEPENDS = " \
     libconfig \
