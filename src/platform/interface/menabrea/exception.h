@@ -54,6 +54,13 @@ void RaiseExceptionImpl(EExceptionFatality fatality, const char * file, int line
         RaiseException(EExceptionFatality_Fatal, "Assertion failed: " #expr ); \
     }
 
+/**
+ * @brief Register shell commands to be executed on disgraceful exit
+ * @param cmd printf-like format string for the command
+ * @param ... Format string arguments
+ */
+void OnDisgracefulShutdown(const char * cmd, ...) __attribute__((format(printf, 1, 2)));
+
 #ifdef __cplusplus
 }
 #endif

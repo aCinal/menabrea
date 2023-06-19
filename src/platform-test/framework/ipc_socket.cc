@@ -26,6 +26,11 @@ static int s_pollableDescriptor = -1;
 
 void IpcSocket::Init(void) {
 
+    /* Request removal of the named socket on disgraceful shutdown. To not risk
+     * a race condition we register this cleanup action first, before creating
+     * the socket in question. */
+    OnDisgracefulShutdown("rm -f %s", UDS_NAME);
+
     s_listeningSocket = CreateListeningSocket(UDS_NAME);
     /* Set the listening socket as the first descriptor to be polled */
     s_pollableDescriptor = s_listeningSocket;
@@ -39,13 +44,13 @@ void IpcSocket::Teardown(void) {
 
     /* Terminate any active connections */
     if (s_activeConnection != -1) {
-        (void) close(s_activeConnection);
+        AssertTrue(0 == close(s_activeConnection));
     }
     /* Close the listening socket */
-    (void) close(s_listeningSocket);
+    AssertTrue(0 == close(s_listeningSocket));
 
     /* Remove the named socket from the filesystem */
-    (void) unlink(UDS_NAME);
+    AssertTrue(0 == unlink(UDS_NAME));
 }
 
 void IpcSocket::WriteBack(const char * fmt, ...) {
@@ -136,7 +141,7 @@ static void HandleConnectionSocketEvent(short events) {
         /* Peer disconnected */
 
         /* Close the descriptor */
-        (void) close(s_activeConnection);
+        AssertTrue(0 == close(s_activeConnection));
         s_activeConnection = -1;
         /* Go back to polling the listening socket */
         s_pollableDescriptor = s_listeningSocket;

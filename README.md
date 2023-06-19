@@ -103,4 +103,4 @@ Applications should define these symbols using the following macros found in `me
 - `APPLICATION_LOCAL_EXIT(core)`
 - `APPLICATION_GLOBAL_EXIT()`
 
-Applications to be loaded are selected via the `platform_config.json` files. The startup script (`menabrea.py`) parses the JSON file and sets the environment variable `MENABREA_APP_LIST` appropriately.
+Applications to be loaded are selected via the `platform_config.json` files. The startup script (`menabrea_start.py`) parses the JSON file and sets the environment variable `MENABREA_APP_LIST` appropriately.

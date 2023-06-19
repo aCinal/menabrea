@@ -7,6 +7,7 @@
 #include <log/log.h>
 #include <log/startup_logger.h>
 #include <exception/signal_handlers.h>
+#include <exception/recovery.h>
 #include <menabrea/log.h>
 #include <string.h>
 #include <stdlib.h>
@@ -78,6 +79,8 @@ int main(int argc, char **argv) {
     TearDownOpenDataPlane(odpInstance);
 
     LogPrint(ELogSeverityLevel_Info, "Platform shutdown complete");
+    /* Do not run any recovery scripts, shutdown was graceful */
+    DeclareShutdownGraceful();
 
     return 0;
 }

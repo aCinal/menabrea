@@ -3,6 +3,8 @@
 #include <startup/cpus.h>
 #include <menabrea/log.h>
 #include <menabrea/exception.h>
+#include <stdlib.h>
+#include <unistd.h>
 
 static int OdpLogger(odp_log_level_t level, const char * format, ...);
 static inline ELogSeverityLevel MapSeverityLevel(odp_log_level_t level);
@@ -10,6 +12,16 @@ static inline ELogSeverityLevel MapSeverityLevel(odp_log_level_t level);
 odp_instance_t InitializeOpenDataPlane(SOdpStartupConfig * config) {
 
     LogPrint(ELogSeverityLevel_Info, "Initializing the ODP layer...");
+
+    /* ODP creates shared memory which we may leak in the case of a disgraceful
+     * shutdown. Request its removal by the cleanup script. */
+    const char * odpShmDir = getenv("ODP_SHM_DIR");
+    if (NULL == odpShmDir) {
+
+        /* No shared memory directory override - use the default */
+        odpShmDir = "/dev/shm";
+    }
+    OnDisgracefulShutdown("rm -rf %s/%d", odpShmDir, getuid());
 
     odp_cpumask_t workerMask;
     odp_cpumask_zero(&workerMask);

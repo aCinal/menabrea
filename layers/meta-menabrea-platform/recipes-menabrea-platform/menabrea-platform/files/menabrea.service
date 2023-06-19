@@ -3,7 +3,11 @@ Description=Menabrea platform
 
 [Service]
 Type=forking
-ExecStart=python3 /opt/menabrea.py
+ExecStart=python3 /opt/menabrea_start.py
+ExecStopPost=sh /opt/menabrea_cleanup.sh
+# Restart the service on crash
+Restart=on-failure
+
 # Kill the processes with SIGINT (fdserver forked by odp_init_global() ignores it and dispatchers handle it gracefully)
 KillSignal=SIGINT
 SyslogIdentifier=menabrea

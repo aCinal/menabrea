@@ -99,8 +99,8 @@ void RunEventDispatchers(SEventDispatcherConfig * config) {
     s_platformShmem = CreatePlatformSharedMemory(config);
 
     /* Install signal listeners */
-    AssertTrue(0 == ListenForSignal(SIGCHLD, SigchldListener));
-    AssertTrue(0 == ListenForSignal(SIGINT, SigintListener));
+    ListenForSignal(SIGCHLD, SigchldListener);
+    ListenForSignal(SIGINT, SigintListener);
 
     RunMainDispatcher();
 

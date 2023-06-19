@@ -3,33 +3,27 @@
 #include <exception/callstack.h>
 #include <menabrea/log.h>
 #include <ucontext.h>
-#include <assert.h>
+#include <sys/prctl.h>
 #include <dlfcn.h>
-#include <stdbool.h>
+#include <unistd.h>
+#include <assert.h>
 #include <errno.h>
 #include <string.h>
 #include <stdio.h>
-#include <sys/prctl.h>
-#include <unistd.h>
+#include <stdlib.h>
 
-#define MAX_LISTENERS_PER_SIGNAL           8
-#define USER_LISTENERS_MAP_SIZE            ( sizeof(s_userListeners) / sizeof(s_userListeners[0]) )
 #define OFFENDING_INSTRUCTION_BUFFER_SIZE  128
 
-typedef struct SUserListenerMap {
+typedef struct SListenersListNode {
+    struct SListenersListNode * Next;
+    TSignalListener Callback;
     int Signal;
-    TUserSignalListener Listeners[MAX_LISTENERS_PER_SIGNAL];
-} SUserListenerMap;
+} SListenersListNode;
 
-static SUserListenerMap s_userListeners[] = {
-    { .Signal = SIGTERM, .Listeners = {} },
-    { .Signal = SIGCHLD, .Listeners = {} },
-    { .Signal = SIGINT, .Listeners = {} },
-    { .Signal = SIGQUIT, .Listeners = {} }
-};
+static SListenersListNode * s_signalListeners = NULL;
 
 static void CommonHandler(int signo, siginfo_t * siginfo, void * ucontext);
-static bool CallUserListeners(int signo, siginfo_t * siginfo);
+static void CallListeners(int signo, siginfo_t * siginfo);
 static void SigbusHandler(siginfo_t * siginfo, ucontext_t * ucontext);
 static void SigfpeHandler(siginfo_t * siginfo, ucontext_t * ucontext);
 static void SigillHandler(siginfo_t * siginfo, ucontext_t * ucontext);
@@ -41,7 +35,7 @@ static void SigintHandler(siginfo_t * siginfo);
 static void SigquitHandler(siginfo_t * siginfo);
 static const char * GetOffendingInstruction(ucontext_t * ucontext, char * buffer, size_t size);
 static void PrintProcessInfo(void);
-static void RestoreDefaultHandlerAndRaise(int signo);
+static bool RestoreDefaultHandlerAndRaise(int signo, const siginfo_t * siginfo);
 
 void InstallSignalHandlers(void) {
 
@@ -50,7 +44,6 @@ void InstallSignalHandlers(void) {
         .sa_flags = SA_SIGINFO | SA_NOCLDSTOP | SA_RESTART
     };
     sigemptyset(&act.sa_mask);
-
     assert(0 == sigaction(SIGBUS, &act, NULL));
     assert(0 == sigaction(SIGILL, &act, NULL));
     assert(0 == sigaction(SIGSEGV, &act, NULL));
@@ -60,49 +53,31 @@ void InstallSignalHandlers(void) {
     assert(0 == sigaction(SIGTERM, &act, NULL));
     assert(0 == sigaction(SIGINT, &act, NULL));
 
-
     /* Ignore the SIGPIPE signal */
     struct sigaction ign = {
         .sa_handler = SIG_IGN
     };
     sigemptyset(&ign.sa_mask);
-
     assert(0 == sigaction(SIGPIPE, &ign, NULL));
+
+    /* At the bottom of the stack place the generic handler */
+    ListenForSignal(0, RestoreDefaultHandlerAndRaise);
 }
 
-int ListenForSignal(int signo, TUserSignalListener callback) {
+void ListenForSignal(int signo, TSignalListener callback) {
 
-    /* Note that this function is not thread-safe */
-
-    for (int i = 0; i < USER_LISTENERS_MAP_SIZE; i++) {
-
-        if (s_userListeners[i].Signal == signo) {
-
-            /* Find free space */
-            for (int j = 0; j < MAX_LISTENERS_PER_SIGNAL; j++) {
-
-                if (NULL == s_userListeners[i].Listeners[j]) {
-
-                    s_userListeners[i].Listeners[j] = callback;
-                    return 0;
-                }
-            }
-
-            LogPrint(ELogSeverityLevel_Warning, "%s(): Already installed maximum number of listeners for signal %d", \
-                __FUNCTION__, signo);
-            return -1;
-        }
-    }
-
-    LogPrint(ELogSeverityLevel_Warning, "%s(): Attempted to register listener for unsupported signal %d", \
-        __FUNCTION__, signo);
-    return -1;
+    SListenersListNode * node = malloc(sizeof(SListenersListNode));
+    assert(node);
+    /* Push the new node onto the stack */
+    node->Callback = callback;
+    node->Signal = signo;
+    node->Next = s_signalListeners;
+    s_signalListeners = node;
 }
 
 static void CommonHandler(int signo, siginfo_t * siginfo, void * ucontext) {
 
     ucontext_t * context = (ucontext_t *) ucontext;
-    bool handledByUser = CallUserListeners(signo, siginfo);
 
     /* Call platform handler */
     switch (signo) {
@@ -149,38 +124,23 @@ static void CommonHandler(int signo, siginfo_t * siginfo, void * ucontext) {
         break;
     }
 
-    /* Restore default behaviour for the signal and raise it again
-     * unless handled by one of users' listeners */
-    if (!handledByUser) {
-
-        LogPrint(ELogSeverityLevel_Info, "Restoring default behaviour for signal %d (%s) and raising it again...", \
-            signo, strsignal(signo));
-        RestoreDefaultHandlerAndRaise(signo);
-    }
+    CallListeners(signo, siginfo);
 }
 
-static bool CallUserListeners(int signo, siginfo_t * siginfo) {
+static void CallListeners(int signo, siginfo_t * siginfo) {
 
-    bool handled = false;
-    /* Call user listeners if any registered */
-    for (int i = 0; i < USER_LISTENERS_MAP_SIZE; i++) {
+    for (SListenersListNode * iter = s_signalListeners; iter != NULL; iter = iter->Next) {
 
-        if (s_userListeners[i].Signal == signo) {
+        /* Check if listener matches the signal or is a catch-all */
+        if (signo == iter->Signal || iter->Signal == 0) {
 
-            for (int j = 0; j < MAX_LISTENERS_PER_SIGNAL; j++) {
+            if (iter->Callback(signo, siginfo)) {
 
-                if (s_userListeners[i].Listeners[j]) {
-
-                    /* User handlers should return true value when the signal has been
-                     * handled. If no handlers declare they have handled the signal,
-                     * then default behaviour shall be triggered */
-                    handled |= s_userListeners[i].Listeners[j](signo, siginfo);
-                }
+                /* Signal handled, break out of the loop */
+                break;
             }
         }
     }
-
-    return handled;
 }
 
 static void SigbusHandler(siginfo_t * siginfo, ucontext_t * ucontext) {
@@ -454,11 +414,19 @@ static void PrintProcessInfo(void) {
     LogPrint(ELogSeverityLevel_Info, "==========================================");
 }
 
-static void RestoreDefaultHandlerAndRaise(int signo) {
+static bool RestoreDefaultHandlerAndRaise(int signo, const siginfo_t * siginfo) {
+
+    (void) siginfo;
+
+    LogPrint(ELogSeverityLevel_Info, "Restoring default behaviour for signal %d (%s) and raising it again...", \
+        signo, strsignal(signo));
 
     struct sigaction act = {
         .sa_handler = SIG_DFL,
     };
     assert(0 == sigaction(signo, &act, NULL));
     raise(signo);
+
+    /* Signal has been handled at this point as this is the default handler (not that this makes a difference anyway) */
+    return true;
 }

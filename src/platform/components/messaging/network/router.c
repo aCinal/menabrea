@@ -33,6 +33,13 @@ void RouterInit(void) {
     AssertTrue(s_outputQueue != EM_QUEUE_UNDEF);
 }
 
+void RouterTeardown(void) {
+
+    LogPrint(ELogSeverityLevel_Info, "Deleting the output queue...");
+    AssertTrue(EM_OK == em_queue_delete(s_outputQueue));
+    s_outputQueue = EM_QUEUE_UNDEF;
+}
+
 void RouteInternodeMessage(TMessage message) {
 
     if (unlikely(EM_OK != em_send(message, s_outputQueue))) {
