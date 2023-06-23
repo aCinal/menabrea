@@ -1,3 +1,10 @@
+# Base this distribution on poky
+require conf/distro/poky.conf
+
+# Remove unused distro features
+DISTRO_FEATURES:remove = \
+    "acl alsa bluetooth debuginfod usbgadget usbhost wifi nfs zeroconf 3g nfc x11 opengl wayland vulkan pulseaudio gobject-introspection-data"
+
 # Use systemd as init manager
 INIT_MANAGER = "systemd"
 
