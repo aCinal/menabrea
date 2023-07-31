@@ -153,7 +153,7 @@ static void HandleConnectionSocketEvent(short events) {
     } else if (events & POLLIN) {
 
         /* Only handle POLLIN when POLLHUP has not been set in events */
-        char buffer[POLLIN_BUF_LEN + 1] = {};
+        char buffer[POLLIN_BUF_LEN + 1];
         ssize_t bytesRead = read(s_activeConnection, buffer, POLLIN_BUF_LEN);
         /* If POLLIN was returned without POLLHUP, then there must be outstanding data in the channel */
         AssertTrue(bytesRead > 0);

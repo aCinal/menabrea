@@ -326,12 +326,13 @@ static em_status_t WorkerEoStart(void * eoCtx, em_eo_t eo, const em_eo_conf_t * 
     (void) eo;
     (void) conf;
 
+    /* Recover the init argument from the shared data field */
+    void * initArg = context->SharedData;
+    /* No user code has been run yet, we can safely clear the shared data field */
+    context->SharedData = NULL;
+
     if (context->UserInit) {
 
-        /* Recover the init argument from the shared data field */
-        void * initArg = context->SharedData;
-        /* No user code has been run yet, we can safely clear the shared data field */
-        context->SharedData = NULL;
         /* Call user-provided initialization function */
         int userStatus = context->UserInit(initArg);
         if (userStatus) {

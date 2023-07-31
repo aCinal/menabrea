@@ -157,5 +157,6 @@ static inline u32 PageAlign(u32 size) {
     u32 page_size = (u32) sysconf(_SC_PAGESIZE);
     /* Page size is always a power of two, instead of
      * using the remainder operator, use a bitmask */
-    return (size + page_size) & ~(page_size - 1);
+    u32 mask = page_size - 1;
+    return (size + mask) & ~mask;
 }

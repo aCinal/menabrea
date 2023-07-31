@@ -16,3 +16,7 @@ inherit module
 
 RPROVIDES_${PN} += "kernel-module-pangloss-driver"
 RPROVIDES_${PN} += "kernel-module-dummy-ringbuffer"
+
+# Automatically load kernel modules at boot
+KERNEL_MODULE_AUTOLOAD:append = " pangloss-driver"
+KERNEL_MODULE_AUTOLOAD:append = " dummy-ringbuffer"
