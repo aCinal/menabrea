@@ -61,7 +61,7 @@ static int WorkerInit(void * arg) {
 
     (void) arg;
 
-    void * sharedPtr = GetMemory(TEST_MEMORY_CONTENT_SIZE, EMemoryPool_SharedRuntime);
+    void * sharedPtr = GetRuntimeMemory(TEST_MEMORY_CONTENT_SIZE);
     if (sharedPtr == nullptr) {
 
         LogPrint(ELogSeverityLevel_Error, "Failed to allocate %ld bytes of shared memory", \
@@ -83,7 +83,7 @@ static int WorkerInit(void * arg) {
 
 static void WorkerLocalInit(int core) {
 
-    int * localData = static_cast<int *>(GetMemory(sizeof(int), EMemoryPool_Local));
+    int * localData = static_cast<int *>(GetRuntimeMemory(sizeof(int)));
     if (localData == nullptr) {
 
         TestRunner::ReportTestResult(TestCase::Result::Failure, \
@@ -126,7 +126,7 @@ static void WorkerLocalExit(int core) {
             *localData, core);
     }
 
-    PutMemory(localData);
+    PutRuntimeMemory(localData);
     SetLocalData(nullptr);
 }
 
@@ -140,7 +140,7 @@ static void WorkerExit(void) {
         return;
     }
 
-    PutMemory(sharedData);
+    PutRuntimeMemory(sharedData);
     TestRunner::ReportTestResult(TestCase::Result::Success);
 }
 

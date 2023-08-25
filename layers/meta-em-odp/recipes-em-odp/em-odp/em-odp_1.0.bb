@@ -2,10 +2,7 @@ SUMMARY = "OpenEventMachine recipe"
 DESCRIPTION = "OpenEventMachine implementation based on OpenDataPlane"
 LICENSE = "MIT"
 
-SRC_URI = " \
-    git://github.com/openeventmachine/em-odp.git;branch=master;protocol=https \
-    file://0001-em-odp-fix-em-timer-attr-init.patch \
-    "
+SRC_URI = "git://github.com/openeventmachine/em-odp.git;branch=master;protocol=https"
 SRCREV = "8ad178851cc8dd01e5387336b58f5d6940aef8a3"
 
 # Git repositories are cloned to ${WORKDIR}/git by default

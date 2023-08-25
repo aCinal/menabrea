@@ -1,4 +1,5 @@
 #define _GNU_SOURCE
+#include <menabrea/exception.h>
 #include <exception/signal_handlers.h>
 #include <exception/callstack.h>
 #include <menabrea/log.h>
@@ -6,7 +7,6 @@
 #include <sys/prctl.h>
 #include <dlfcn.h>
 #include <unistd.h>
-#include <assert.h>
 #include <errno.h>
 #include <string.h>
 #include <stdio.h>
@@ -44,21 +44,21 @@ void InstallSignalHandlers(void) {
         .sa_flags = SA_SIGINFO | SA_NOCLDSTOP | SA_RESTART
     };
     sigemptyset(&act.sa_mask);
-    assert(0 == sigaction(SIGBUS, &act, NULL));
-    assert(0 == sigaction(SIGILL, &act, NULL));
-    assert(0 == sigaction(SIGSEGV, &act, NULL));
-    assert(0 == sigaction(SIGFPE, &act, NULL));
-    assert(0 == sigaction(SIGABRT, &act, NULL));
-    assert(0 == sigaction(SIGCHLD, &act, NULL));
-    assert(0 == sigaction(SIGTERM, &act, NULL));
-    assert(0 == sigaction(SIGINT, &act, NULL));
+    AssertTrue(0 == sigaction(SIGBUS, &act, NULL));
+    AssertTrue(0 == sigaction(SIGILL, &act, NULL));
+    AssertTrue(0 == sigaction(SIGSEGV, &act, NULL));
+    AssertTrue(0 == sigaction(SIGFPE, &act, NULL));
+    AssertTrue(0 == sigaction(SIGABRT, &act, NULL));
+    AssertTrue(0 == sigaction(SIGCHLD, &act, NULL));
+    AssertTrue(0 == sigaction(SIGTERM, &act, NULL));
+    AssertTrue(0 == sigaction(SIGINT, &act, NULL));
 
     /* Ignore the SIGPIPE signal */
     struct sigaction ign = {
         .sa_handler = SIG_IGN
     };
     sigemptyset(&ign.sa_mask);
-    assert(0 == sigaction(SIGPIPE, &ign, NULL));
+    AssertTrue(0 == sigaction(SIGPIPE, &ign, NULL));
 
     /* At the bottom of the stack place the generic handler */
     ListenForSignal(0, RestoreDefaultHandlerAndRaise);
@@ -67,7 +67,7 @@ void InstallSignalHandlers(void) {
 void ListenForSignal(int signo, TSignalListener callback) {
 
     SListenersListNode * node = malloc(sizeof(SListenersListNode));
-    assert(node);
+    AssertTrue(node);
     /* Push the new node onto the stack */
     node->Callback = callback;
     node->Signal = signo;
@@ -424,7 +424,7 @@ static bool RestoreDefaultHandlerAndRaise(int signo, const siginfo_t * siginfo) 
     struct sigaction act = {
         .sa_handler = SIG_DFL,
     };
-    assert(0 == sigaction(signo, &act, NULL));
+    AssertTrue(0 == sigaction(signo, &act, NULL));
     raise(signo);
 
     /* Signal has been handled at this point as this is the default handler (not that this makes a difference anyway) */

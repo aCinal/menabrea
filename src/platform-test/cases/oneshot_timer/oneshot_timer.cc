@@ -59,7 +59,7 @@ int TestOneshotTimer::StartTest(void * args) {
 
     /* Allocate shared memory for the worker's use*/
     TestOneshotTimerShmem * shmem = \
-        static_cast<TestOneshotTimerShmem *>(GetMemory(sizeof(TestOneshotTimerShmem), EMemoryPool_SharedRuntime));
+        static_cast<TestOneshotTimerShmem *>(GetRuntimeMemory(sizeof(TestOneshotTimerShmem)));
     if (unlikely(shmem == nullptr)) {
 
         LogPrint(ELogSeverityLevel_Error, "Failed to allocate shared memory for test '%s'", this->GetName());
@@ -85,7 +85,7 @@ int TestOneshotTimer::StartTest(void * args) {
     if (unlikely(s_receiverId == WORKER_ID_INVALID)) {
 
         LogPrint(ELogSeverityLevel_Error, "Failed to deploy the test worker for test '%s'", this->GetName());
-        PutMemory(shmem);
+        PutRuntimeMemory(shmem);
         return -1;
     }
 
@@ -129,7 +129,7 @@ static void ReceiverExit(void) {
     /* Destroy the chrono object */
     shmem->TimeWhenArmed.~time_point();
     /* Free the shared memory */
-    PutMemory(shmem);
+    PutRuntimeMemory(shmem);
 }
 
 static void ReceiverBody(TMessage message) {
@@ -154,22 +154,13 @@ static void ReceiverBody(TMessage message) {
 
         /* Check accuracy */
         u64 expirationTime = std::chrono::duration_cast<std::chrono::microseconds>(currentTime - shmem->TimeWhenArmed).count();
-        if (expirationTime < shmem->ExpirationTime) {
+        if (expirationTime > shmem->ExpirationTime + shmem->MaxError or expirationTime < std::min(0UL, shmem->ExpirationTime - shmem->MaxError)) {
 
             TestRunner::ReportTestResult(TestCase::Result::Failure, \
-                "Timer fired early! Observed expiration time %ld less than requested %ld", \
-                expirationTime, shmem->ExpirationTime);
-            LogPrint(ELogSeverityLevel_Error, \
-                "Timer fired early! Observed expiration time %ld less than requested %ld", \
-                expirationTime, shmem->ExpirationTime);
-
-        } else if (expirationTime - shmem->ExpirationTime > shmem->MaxError) {
-
-            TestRunner::ReportTestResult(TestCase::Result::Failure, \
-                "Timeout was late! Observed expiration time %ld significantly larger than requested %ld (max error allowed: %ld)", \
+                "Observed expiration time %ld significantly different from expected %ld (max error allowed: %ld)", \
                 expirationTime, shmem->ExpirationTime, shmem->MaxError);
             LogPrint(ELogSeverityLevel_Error, \
-                "Timeout was late! Observed expiration time %ld significantly larger than requested %ld (max error allowed: %ld)", \
+                "Observed expiration time %ld significantly different from expected %ld (max error allowed: %ld)", \
                 expirationTime, shmem->ExpirationTime, shmem->MaxError);
         }
     }

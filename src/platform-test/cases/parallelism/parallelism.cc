@@ -77,7 +77,7 @@ int TestParallelism::StartTest(void * args) {
 
     /* Allocate the context shared between the workers */
     TestSharedData * sharedMem = \
-        static_cast<TestSharedData *>(GetMemory(sizeof(TestSharedData), EMemoryPool_SharedRuntime));
+        static_cast<TestSharedData *>(GetRuntimeMemory(sizeof(TestSharedData)));
     if (sharedMem == nullptr) {
 
         LogPrint(ELogSeverityLevel_Error, "Failed to allocate the shared memory for test '%s'", \
@@ -122,7 +122,7 @@ int TestParallelism::StartTest(void * args) {
 
         /* Allocate private data for each worker */
         TestWorkerData * workerPrivateData = \
-            static_cast<TestWorkerData *>(GetMemory(sizeof(TestWorkerData), EMemoryPool_SharedRuntime));
+            static_cast<TestWorkerData *>(GetRuntimeMemory(sizeof(TestWorkerData)));
         if (unlikely(workerPrivateData == nullptr)) {
 
             LogPrint(ELogSeverityLevel_Error, "Failed to allocate private data for worker %d in test '%s'", \
@@ -134,7 +134,7 @@ int TestParallelism::StartTest(void * args) {
                 [](TWorkerId id) { TerminateWorker(id); }
             );
             /* Free the shared memory */
-            PutMemory(sharedMem);
+            PutRuntimeMemory(sharedMem);
             /* Fail the test synchronously */
             return -1;
         }
@@ -166,9 +166,9 @@ int TestParallelism::StartTest(void * args) {
                 [](TWorkerId id) { TerminateWorker(id); }
             );
             /* Free the shared memory */
-            PutMemory(sharedMem);
+            PutRuntimeMemory(sharedMem);
             /* Free the private data of the worker whose deployment failed */
-            PutMemory(workerPrivateData);
+            PutRuntimeMemory(workerPrivateData);
             /* Fail the test synchronously */
             return -1;
         }
@@ -178,7 +178,7 @@ int TestParallelism::StartTest(void * args) {
     /* Put the memory - each worker references it once, so the buffer
      * will be released only when all workers terminate at the end
      * of the test */
-    PutMemory(sharedMem);
+    PutRuntimeMemory(sharedMem);
 
     std::vector<TMessage> triggerMessages;
     /* Create as many messages as there are workers */
@@ -238,7 +238,7 @@ static int WorkerInit(void * arg) {
     TestWorkerData * workerData = static_cast<TestWorkerData *>(arg);
     /* Reference the shared memory, so that its lifetime is at least
      * the lifetime of the current worker */
-    RefMemory(workerData->SharedData);
+    RefRuntimeMemory(workerData->SharedData);
     SetSharedData(workerData);
 
     return 0;
@@ -248,9 +248,9 @@ static void WorkerExit(void) {
 
     TestWorkerData * workerData = static_cast<TestWorkerData *>(GetSharedData());
     /* Decrement reference counter of the shared memory */
-    PutMemory(workerData->SharedData);
+    PutRuntimeMemory(workerData->SharedData);
     /* Free private memory */
-    PutMemory(workerData);
+    PutRuntimeMemory(workerData);
 }
 
 static void WorkerBody(TMessage message) {

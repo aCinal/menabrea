@@ -9,6 +9,7 @@
 #include <menabrea/cores.h>
 #include <menabrea/exception.h>
 #include <stdarg.h>
+#include <alloca.h>
 
 namespace TestRunner {
 
@@ -69,8 +70,7 @@ static TAtomic64 * s_testRunCounterPtr = nullptr;
 
 void Init(void) {
 
-    s_testRunCounterPtr = \
-        static_cast<TAtomic64 *>(GetMemory(sizeof(TAtomic64), EMemoryPool_SharedInit));
+    s_testRunCounterPtr = static_cast<TAtomic64 *>(GetInitMemory(sizeof(TAtomic64)));
     AssertTrue(s_testRunCounterPtr != nullptr);
     Atomic64Init(s_testRunCounterPtr);
 
@@ -235,7 +235,7 @@ static void HandleCommandRun(const char * testCaseName, char * testArgsString) {
         }
 
         /* Allocate memory for the parameters */
-        testParams = GetMemory(paramsSize, EMemoryPool_Local);
+        testParams = alloca(paramsSize);
         if (unlikely(testParams == nullptr)) {
 
             LOG_ERROR("%s(): Failed to allocate %d bytes for the parameters of test case '%s'", \
@@ -252,9 +252,6 @@ static void HandleCommandRun(const char * testCaseName, char * testArgsString) {
                 __FUNCTION__, testCaseName);
             REPORT_BAD("Failed to parse the test case parameteres for test '%s'", \
                 testCaseName);
-            if (testParams) {
-                PutMemory(testParams);
-            }
             return;
         }
     }
@@ -270,9 +267,6 @@ static void HandleCommandRun(const char * testCaseName, char * testArgsString) {
             __FUNCTION__, testCaseName);
         REPORT_BAD("Failed to allocate necessary resources to run test case '%s'", \
             testCaseName);
-        if (testParams) {
-            PutMemory(testParams);
-        }
         return;
     }
 
@@ -285,9 +279,6 @@ static void HandleCommandRun(const char * testCaseName, char * testArgsString) {
         REPORT_BAD("Failed to allocate necessary resources to run test case '%s'", \
             testCaseName);
         DestroyTimer(timeoutTimer);
-        if (testParams) {
-            PutMemory(testParams);
-        }
         return;
     }
 
@@ -301,9 +292,6 @@ static void HandleCommandRun(const char * testCaseName, char * testArgsString) {
             testCaseName);
         DestroyTimer(timeoutTimer);
         DestroyMessage(timeoutMessage);
-        if (testParams) {
-            PutMemory(testParams);
-        }
         return;
     }
 
@@ -317,9 +305,6 @@ static void HandleCommandRun(const char * testCaseName, char * testArgsString) {
         REPORT_BAD("Failed to start test case '%s'", testCaseName);
         AssertTrue(timeoutTimer == DisarmTimer(timeoutTimer));
         DestroyTimer(timeoutTimer);
-        if (testParams) {
-            PutMemory(testParams);
-        }
         return;
     }
 
@@ -328,9 +313,6 @@ static void HandleCommandRun(const char * testCaseName, char * testArgsString) {
     s_currentTestCase = testCaseInstance;
     /* Do a state transition */
     s_currentState = State::Busy;
-    if (testParams) {
-        PutMemory(testParams);
-    }
 }
 
 static void HandleCommandStop(void) {

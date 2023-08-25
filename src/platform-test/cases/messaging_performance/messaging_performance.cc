@@ -83,21 +83,21 @@ int TestMessagingPerformance::ParseParams(char * paramsIn, void * paramsOut) {
     TestMessagingPerformanceParams * parsed = static_cast<TestMessagingPerformanceParams *>(paramsOut);
     if (parsed->Burst == 0) {
 
-        LogPrint(ELogSeverityLevel_Warning, "%s: Burst parameter must be positive", \
+        LogPrint(ELogSeverityLevel_Error, "%s: Burst parameter must be positive", \
             this->GetName());
         return -1;
     }
 
     if (parsed->TimerPeriod == 0) {
 
-        LogPrint(ELogSeverityLevel_Warning, "%s: Timer period must be positive", \
+        LogPrint(ELogSeverityLevel_Error, "%s: Timer period must be positive", \
             this->GetName());
         return -1;
     }
 
     if (parsed->Rounds == 0) {
 
-        LogPrint(ELogSeverityLevel_Warning, "%s: Number of rounds must be positive", \
+        LogPrint(ELogSeverityLevel_Error, "%s: Number of rounds must be positive", \
             this->GetName());
         return -1;
     }
@@ -110,7 +110,7 @@ int TestMessagingPerformance::StartTest(void * arg) {
     TestMessagingPerformanceParams * params = static_cast<TestMessagingPerformanceParams *>(arg);
 
     PerfTestShmem * testSharedMemory = \
-        static_cast<PerfTestShmem *>(GetMemory(sizeof(PerfTestShmem), EMemoryPool_SharedRuntime));
+        static_cast<PerfTestShmem *>(GetRuntimeMemory(sizeof(PerfTestShmem)));
     if (unlikely(testSharedMemory == nullptr)) {
 
         LogPrint(ELogSeverityLevel_Error, "Failed to allocate shared memory for test '%s'", \
@@ -148,13 +148,13 @@ int TestMessagingPerformance::StartTest(void * arg) {
 
         LogPrint(ELogSeverityLevel_Error, "Failed to deploy the worker in test '%s'", \
             this->GetName());
-        PutMemory(testSharedMemory);
+        PutRuntimeMemory(testSharedMemory);
         return -1;
     }
 
     /* The worker synchronously touches the memory in the user init callback,
      * we can safely drop a reference to it here */
-    PutMemory(testSharedMemory);
+    PutRuntimeMemory(testSharedMemory);
 
     if (unlikely(StartTriggerTimer(params->TimerPeriod))) {
 
@@ -213,7 +213,7 @@ int TestMessagingPerformance::StartTriggerTimer(u64 period) {
 static int WorkerInit(void * arg) {
 
     /* Touch and save the shared memory */
-    RefMemory(arg);
+    RefRuntimeMemory(arg);
     SetSharedData(arg);
     return 0;
 }
@@ -236,7 +236,7 @@ static void WorkerLocalExit(int core) {
 static void WorkerExit(void) {
 
     void * shmem = GetSharedData();
-    PutMemory(shmem);
+    PutRuntimeMemory(shmem);
 }
 
 static void WorkerBody(TMessage message) {

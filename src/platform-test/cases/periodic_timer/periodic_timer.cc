@@ -56,7 +56,7 @@ int TestPeriodicTimer::StartTest(void * args) {
 
     /* Allocate shared memory for the worker's use*/
     TestPeriodicTimerShmem * shmem = \
-        static_cast<TestPeriodicTimerShmem *>(GetMemory(sizeof(TestPeriodicTimerShmem), EMemoryPool_SharedRuntime));
+        static_cast<TestPeriodicTimerShmem *>(GetRuntimeMemory(sizeof(TestPeriodicTimerShmem)));
     if (unlikely(shmem == nullptr)) {
 
         LogPrint(ELogSeverityLevel_Error, "Failed to allocate shared memory for test '%s'", this->GetName());
@@ -82,7 +82,7 @@ int TestPeriodicTimer::StartTest(void * args) {
     if (unlikely(s_receiverId == WORKER_ID_INVALID)) {
 
         LogPrint(ELogSeverityLevel_Error, "Failed to deploy the test worker for test '%s'", this->GetName());
-        PutMemory(shmem);
+        PutRuntimeMemory(shmem);
         return -1;
     }
 
@@ -135,7 +135,7 @@ static void ReceiverExit(void) {
     /* Destroy the chrono object */
     shmem->LastTimeout.~time_point();
     /* Free the shared memory */
-    PutMemory(shmem);
+    PutRuntimeMemory(shmem);
 }
 
 static void ReceiverBody(TMessage message) {
@@ -160,21 +160,14 @@ static void ReceiverBody(TMessage message) {
 
         /* Check accuracy */
         u64 observedPeriod = std::chrono::duration_cast<std::chrono::microseconds>(currentTime - shmem->LastTimeout).count();
-        if (observedPeriod < shmem->ExpectedPeriod) {
+        if (observedPeriod > shmem->ExpectedPeriod + shmem->MaxError or observedPeriod < std::min(0UL, shmem->ExpectedPeriod - shmem->MaxError)) {
 
             TestRunner::ReportTestResult(TestCase::Result::Failure, \
-                "Observed period %ld less than expected %ld", observedPeriod, shmem->ExpectedPeriod);
+                "Observed period %ld significantly different from expected %ld (period number: %d, max error allowed: %ld)", \
+                observedPeriod, shmem->ExpectedPeriod, shmem->MessagesReceived, shmem->MaxError);
             LogPrint(ELogSeverityLevel_Error, \
-                "Observed period %ld less than expected %ld", observedPeriod, shmem->ExpectedPeriod);
-
-        } else if (observedPeriod - shmem->ExpectedPeriod > shmem->MaxError) {
-
-            TestRunner::ReportTestResult(TestCase::Result::Failure, \
-                "Observed period %ld significantly larger than expected %ld (max error allowed: %ld)", \
-                observedPeriod, shmem->ExpectedPeriod, shmem->MaxError);
-            LogPrint(ELogSeverityLevel_Error, \
-                "Observed period %ld significantly larger than expected %ld (max error allowed: %ld)", \
-                observedPeriod, shmem->ExpectedPeriod, shmem->MaxError);
+                "Observed period %ld significantly different from expected %ld (period number: %d, max error allowed: %ld)", \
+                observedPeriod, shmem->ExpectedPeriod, shmem->MessagesReceived, shmem->MaxError);
         }
     }
 
