@@ -18,7 +18,7 @@ extern "C" {
 static inline void * GetInitMemory(u32 size) { return env_shared_malloc(size); }
 
 /**
- * @brief Reserve named shared memory region and return an address to it
+ * @brief Reserve named shared memory region and return a pointer to it
  * @param name Name of the shared memory region
  * @param size Size of the allocation
  * @return Memory address or NULL if the request could not be satisfied
