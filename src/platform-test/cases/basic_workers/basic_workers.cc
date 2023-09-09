@@ -14,6 +14,7 @@ static constexpr const TWorkerId DUMMY_WORKER_ID = 0x420;
 
 static int Subcase2GlobalInit(void * arg);
 static void Subcase3LocalInit(int core);
+static void Subcase3GlobalExit(void);
 static int Subcase9GlobalInit(void * arg);
 static void DummyBody(TMessage message);
 
@@ -123,8 +124,10 @@ int TestBasicWorkers::RunSubcase1(void) {
 
 int TestBasicWorkers::RunSubcase2(void) {
 
+    int untouchable = 0;
     SWorkerConfig workerConfig = {
         .Name = "Subcase2Worker",
+        .InitArg = &untouchable,
         .WorkerId = WORKER_ID_INVALID,
         .CoreMask = GetAllCoresMask(),
         .UserInit = Subcase2GlobalInit,
@@ -138,7 +141,22 @@ int TestBasicWorkers::RunSubcase2(void) {
         return -1;
     }
 
-    TestRunner::ReportTestResult(TestCase::Result::Success);
+    /* The worker should have called TerminateWorker in its global init before having the chance to
+     * touch the flag passed via InitArg. Make sure it is so. */
+    if (untouchable) {
+
+        LogPrint(ELogSeverityLevel_Error, \
+            "Argument unexpectedly touched by the worker despite having called TerminateWorker and set to %d in test '%s'", \
+            untouchable, this->GetName());
+        TestRunner::ReportTestResult(TestCase::Result::Failure, \
+            "Argument unexpectedly touched by the worker despite having called TerminateWorker and set to %d", \
+            untouchable);
+
+    } else {
+
+        TestRunner::ReportTestResult(TestCase::Result::Success);
+    }
+
     return 0;
 }
 
@@ -149,6 +167,7 @@ int TestBasicWorkers::RunSubcase3(void) {
         .WorkerId = WORKER_ID_INVALID,
         .CoreMask = GetAllCoresMask(),
         .UserLocalInit = Subcase3LocalInit,
+        .UserExit = Subcase3GlobalExit,
         .WorkerBody = DummyBody
     };
     /* Terminate asynchronously in the local init */
@@ -358,9 +377,10 @@ int TestBasicWorkers::RunSubcase11(void) {
 
 static int Subcase2GlobalInit(void * arg) {
 
-    (void) arg;
     /* Terminate current worker */
     TerminateWorker(WORKER_ID_INVALID);
+    /* We should never get here to lay our hands on the argument */
+    *((int *) arg) = 1;
     return 0;
 }
 
@@ -370,10 +390,15 @@ static void Subcase3LocalInit(int core) {
      * are tested separately */
     if (core == 0) {
 
-        /* Terminate current worker */
+        /* Terminate current worker - result will be reported asynchronously
+         * from the global exit */
         TerminateWorker(WORKER_ID_INVALID);
-        TestRunner::ReportTestResult(TestCase::Result::Success);
     }
+}
+
+static void Subcase3GlobalExit(void) {
+
+    TestRunner::ReportTestResult(TestCase::Result::Success);
 }
 
 static int Subcase9GlobalInit(void * arg) {

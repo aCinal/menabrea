@@ -83,9 +83,12 @@ static void WorkerBody(TMessage message) {
 
             /* Report success to the test framework */
             TestRunner::ReportTestResult(TestCase::Result::Success);
-            /* Schedule current worker termination */
-            TerminateWorker(WORKER_ID_INVALID);
+            /* Note that the worker is deployed only on the shared core so we do
+             * not risk a race condition where the StopTest callback tries to
+             * terminate us again by reading obsolete s_workerId */
             s_workerId = WORKER_ID_INVALID;
+            /* Terminate self */
+            TerminateWorker(WORKER_ID_INVALID);
         }
 
     } else {

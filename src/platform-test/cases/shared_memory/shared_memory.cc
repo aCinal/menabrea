@@ -75,7 +75,7 @@ static int WorkerInit(void * arg) {
     /* Save the pointer in the worker's context in the platform */
     SetSharedData(sharedPtr);
 
-    /* Request termination, so that exit functions get called immediately */
+    /* Terminate self */
     TerminateWorker(WORKER_ID_INVALID);
 
     return 0;

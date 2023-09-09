@@ -8,6 +8,9 @@
 #include <menabrea/common.h>
 #include <event_machine.h>
 #include <string.h>
+#include <setjmp.h>
+
+static jmp_buf s_jumpPad;
 
 static em_status_t WorkerEoStart(void * eoCtx, em_eo_t eo, const em_eo_conf_t * conf);
 static em_status_t WorkerEoLocalStart(void * eoCtx, em_eo_t eo);
@@ -155,6 +158,9 @@ void TerminateWorker(TWorkerId workerId) {
 
     /* If called with WORKER_ID_INVALID, terminate current worker */
     TWorkerId realId = (workerId == WORKER_ID_INVALID) ? GetOwnWorkerId() : workerId;
+    /* If terminating current worker (and succesfully at that) we want to break out
+     * of the user code and do a non-local goto straight back into platform code */
+    bool doNonLocalGoto = (WORKER_ID_INVALID == workerId);
 
     if (WorkerIdGetNode(realId) != GetOwnNodeId()) {
 
@@ -211,9 +217,16 @@ void TerminateWorker(TWorkerId workerId) {
         /* Worker in invalid state */
 
         UnlockWorkerTableEntry(realId);
+        doNonLocalGoto = false;
         LogPrint(ELogSeverityLevel_Warning, "%s(): Worker 0x%x in invalid state: %d", \
             __FUNCTION__, realId, state);
         break;
+    }
+
+    if (doNonLocalGoto) {
+
+        /* Terminating self, break out of the worker body/init immediately. */
+        longjmp(s_jumpPad, 1);
     }
 }
 
@@ -333,15 +346,24 @@ static em_status_t WorkerEoStart(void * eoCtx, em_eo_t eo, const em_eo_conf_t * 
 
     if (context->UserInit) {
 
-        /* Call user-provided initialization function */
-        int userStatus = context->UserInit(initArg);
-        if (userStatus) {
+        /* Prepare for a non-local return in case the worker chooses to terminate */
+        if (0 == setjmp(s_jumpPad)) {
 
-            LogPrint(ELogSeverityLevel_Warning, \
-                "User's global initialization function for worker '%s' failed (return value: %d)", \
-                context->Name, userStatus);
-            /* Return error, resources will be cleaned up in the 'DeployWorker' function */
-            return EM_ERROR;
+            /* Call user-provided initialization function */
+            int userStatus = context->UserInit(initArg);
+            if (userStatus) {
+
+                LogPrint(ELogSeverityLevel_Warning, \
+                    "User's global initialization function for worker '%s' failed (return value: %d)", \
+                    context->Name, userStatus);
+                /* Return error, resources will be cleaned up in the 'DeployWorker' function */
+                return EM_ERROR;
+            }
+
+        } else {
+
+            LogPrint(ELogSeverityLevel_Debug, "Worker 0x%x jumped back to %s", \
+                context->WorkerId, __FUNCTION__);
         }
     }
 
@@ -360,11 +382,20 @@ static em_status_t WorkerEoLocalStart(void * eoCtx, em_eo_t eo) {
 
     if (isHostToWorker && context->UserLocalInit) {
 
-        /* Run user-defined initialization function. Note that this will be run on
-         * different cores in different processes so we rely here on the fact that the
-         * address spaces look the same, i.e. the user library is loaded before
-         * the fork. */
-        context->UserLocalInit(core);
+        /* Prepare for a non-local return in case the worker chooses to terminate */
+        if (0 == setjmp(s_jumpPad)) {
+
+            /* Run user-defined initialization function. Note that this will be run on
+             * different cores in different processes so we rely here on the fact that the
+             * address spaces look the same, i.e. the user library is loaded before
+             * the fork. */
+            context->UserLocalInit(core);
+
+        } else {
+
+            LogPrint(ELogSeverityLevel_Debug, "Worker 0x%x jumped back to %s", \
+                context->WorkerId, __FUNCTION__);
+        }
     }
 
     return EM_OK;
@@ -417,9 +448,20 @@ static void WorkerEoReceive(void * eoCtx, em_event_t event, em_event_type_t type
     (void) queue;
     (void) qCtx;
 
-    /* TODO: Add statistics/profiling here (under spinlock as the worker may be parallel) */
+    /* Prepare for a non-local return in case the worker chooses to terminate */
+    if (0 == setjmp(s_jumpPad)) {
+        /* TODO: If this turns out to be too much overhead consider adding a flag in the worker context to denote that
+         * the worker may never terminate on its own (we could then raise an exception in TerminateWorker on violation of
+         * this promise on behalf of the user, and skip setting the landing pad here) */
 
-    AssertTrue(context->WorkerBody != NULL);
-    /* Pass the event to the user-provided handler */
-    context->WorkerBody(event);
+        /* TODO: Add statistics/profiling here (under spinlock as the worker may be parallel) */
+        AssertTrue(context->WorkerBody != NULL);
+        /* Pass the event to the user-provided handler */
+        context->WorkerBody(event);
+
+    } else {
+
+        LogPrint(ELogSeverityLevel_Debug, "Worker 0x%x jumped back to %s", \
+            context->WorkerId, __FUNCTION__);
+    }
 }
