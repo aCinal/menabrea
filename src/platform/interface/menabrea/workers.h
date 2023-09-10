@@ -181,6 +181,8 @@ static inline TWorkerId DeploySimpleParallelWorker(const char * name, TWorkerId 
  *       execution is immediately interrupted on the current core. Note that the worker may continue executing
  *       its body to completion on a separate core if it is parallel (or its local init if TerminateWorker is
  *       called in UserLocalInit, in which case the worker does not need to be parallel).
+ * @warning Calling this function with argument WORKER_ID_INVALID in the context of UserLocalExit or UserExit
+ *          is an error and the function raises a hard exception to prevent returning
  * @see WORKER_ID_INVALID
  */
 void TerminateWorker(TWorkerId workerId);

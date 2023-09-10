@@ -10,13 +10,22 @@
 #include <string.h>
 #include <setjmp.h>
 
-static jmp_buf s_jumpPad;
-
 static em_status_t WorkerEoStart(void * eoCtx, em_eo_t eo, const em_eo_conf_t * conf);
 static em_status_t WorkerEoLocalStart(void * eoCtx, em_eo_t eo);
 static em_status_t WorkerEoStop(void * eoCtx, em_eo_t eo);
 static em_status_t WorkerEoLocalStop(void * eoCtx, em_eo_t eo);
 static void WorkerEoReceive(void * eoCtx, em_event_t event, em_event_type_t type, em_queue_t queue, void * qCtx);
+
+typedef enum ECurrentEoCallback {
+    ECurrentEoCallback_Start,
+    ECurrentEoCallback_LocalStart,
+    ECurrentEoCallback_Stop,
+    ECurrentEoCallback_LocalStop,
+    ECurrentEoCallback_Receive
+} ECurrentEoCallback;
+
+static ECurrentEoCallback s_currentEoCallback;
+static jmp_buf s_jumpPad;
 
 TWorkerId DeployWorker(const SWorkerConfig * config) {
 
@@ -158,10 +167,6 @@ void TerminateWorker(TWorkerId workerId) {
 
     /* If called with WORKER_ID_INVALID, terminate current worker */
     TWorkerId realId = (workerId == WORKER_ID_INVALID) ? GetOwnWorkerId() : workerId;
-    /* If terminating current worker (and succesfully at that) we want to break out
-     * of the user code and do a non-local goto straight back into platform code */
-    bool doNonLocalGoto = (WORKER_ID_INVALID == workerId);
-
     if (WorkerIdGetNode(realId) != GetOwnNodeId()) {
 
         RaiseException(EExceptionFatality_NonFatal, "Attempted to terminate remote worker 0x%x", \
@@ -217,13 +222,39 @@ void TerminateWorker(TWorkerId workerId) {
         /* Worker in invalid state */
 
         UnlockWorkerTableEntry(realId);
-        doNonLocalGoto = false;
+
+        /* Always issue a warning since this is always a failure in application design to
+         * call TerminateWorker twice (or a bug if called for a bad worker ID altogether) */
         LogPrint(ELogSeverityLevel_Warning, "%s(): Worker 0x%x in invalid state: %d", \
             __FUNCTION__, realId, state);
+
+        if (WORKER_ID_INVALID == workerId) {
+
+            /* That being said, when the current worker is being terminated, we handle a race
+             * condition for the application, where the worker (parallel) calls TerminateWorker
+             * on two cores at the same time. By handling this case we ensure that calling
+             * TerminateWorker(WORKER_ID_INVALID) always interrupts execution of user code.
+             * The assertion below is an internal sanity check: if the worker is executing in
+             * the first place, and is in invalid state for termination, then it must be in
+             * state EWorkerState_Terminating. */
+            AssertTrue(EWorkerState_Terminating == state);
+
+            if (s_currentEoCallback == ECurrentEoCallback_LocalStop || s_currentEoCallback == ECurrentEoCallback_Stop) {
+
+                /* Tried terminating self in user exit code (local or global). Either way this
+                 * is an error. So as to honour the promise that TerminateWorker(WORKER_ID_INVALID)
+                 * never returns to user code, our hand is forced to raise a hard exception here. */
+                RaiseException(EExceptionFatality_Fatal, \
+                    "Tried terminating self (0x%x) in user exit code (current EO callback: %d)", \
+                    realId, s_currentEoCallback);
+            }
+        }
         break;
     }
 
-    if (doNonLocalGoto) {
+    /* If terminating current worker we want to break out of the user code and do
+     * a non-local goto straight back into platform code */
+    if (WORKER_ID_INVALID == workerId) {
 
         /* Terminating self, break out of the worker body/init immediately. */
         longjmp(s_jumpPad, 1);
@@ -339,6 +370,8 @@ static em_status_t WorkerEoStart(void * eoCtx, em_eo_t eo, const em_eo_conf_t * 
     (void) eo;
     (void) conf;
 
+    s_currentEoCallback = ECurrentEoCallback_Start;
+
     /* Recover the init argument from the shared data field */
     void * initArg = context->SharedData;
     /* No user code has been run yet, we can safely clear the shared data field */
@@ -374,6 +407,8 @@ static em_status_t WorkerEoLocalStart(void * eoCtx, em_eo_t eo) {
 
     SWorkerContext * context = (SWorkerContext *) eoCtx;
 
+    s_currentEoCallback = ECurrentEoCallback_LocalStart;
+
     int core = em_core_id();
     /* Check if the worker has been deployed to the current core - only
      * run user-defined init callback on the relevant cores that will
@@ -405,6 +440,8 @@ static em_status_t WorkerEoStop(void * eoCtx, em_eo_t eo) {
 
     SWorkerContext * context = (SWorkerContext *) eoCtx;
 
+    s_currentEoCallback = ECurrentEoCallback_Stop;
+
     if (context->UserExit) {
 
         context->UserExit();
@@ -422,6 +459,9 @@ static em_status_t WorkerEoStop(void * eoCtx, em_eo_t eo) {
 static em_status_t WorkerEoLocalStop(void * eoCtx, em_eo_t eo) {
 
     SWorkerContext * context = (SWorkerContext *) eoCtx;
+
+    s_currentEoCallback = ECurrentEoCallback_LocalStop;
+
     int core = em_core_id();
     /* Check if the worker has been deployed to the current core - only
      * run user-defined exit callback on the relevant cores that used to
@@ -443,6 +483,8 @@ static em_status_t WorkerEoLocalStop(void * eoCtx, em_eo_t eo) {
 static void WorkerEoReceive(void * eoCtx, em_event_t event, em_event_type_t type, em_queue_t queue, void * qCtx) {
 
     SWorkerContext * context = (SWorkerContext *) eoCtx;
+
+    s_currentEoCallback = ECurrentEoCallback_Receive;
 
     (void) type;
     (void) queue;
