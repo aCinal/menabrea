@@ -351,7 +351,7 @@ void EndAtomicContext(void) {
 
 void TerminateAllWorkers(void) {
 
-    LogPrint(ELogSeverityLevel_Debug, "Terminating lingering workers...");
+    LogPrint(ELogSeverityLevel_Info, "Terminating lingering workers...");
 
     for (TWorkerId i = 0; i < MAX_WORKER_COUNT; i++) {
 

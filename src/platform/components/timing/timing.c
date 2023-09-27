@@ -10,6 +10,7 @@
 #include <event_machine.h>
 
 static inline void ChangeStateFromArmedToIdle(STimerContext * context);
+static inline void FinalizeTimerDestruction(STimerContext * context);
 
 TTimerId CreateTimer(const char * name) {
 
@@ -71,18 +72,22 @@ TTimerId ArmTimer(TTimerId timerId, u64 expires, u64 period, TMessage message, T
     LockTimerTableEntry(timerId);
     STimerContext * context = FetchTimerContext(timerId);
 
-    char timerName[MAX_TIMER_NAME_LEN];
-    (void) strcpy(timerName, context->Name);
-
     /* Check timer state */
     ETimerState state = context->State;
     if (state != ETimerState_Idle) {
 
+        /* Note that this block correctly handles the case when the timer has already been retired. It is still exceptional behaviour
+         * on the part of the application to try and arm a timer in exit code, so raising the exception is reasonable. */
+
         UnlockTimerTableEntry(timerId);
-        RaiseException(EExceptionFatality_NonFatal, "Timer '%s' (0x%x) in invalid state: %d (message ID: 0x%x, receiver: 0x%x)", \
-            timerName, timerId, state, GetMessageId(message), receiver);
+        RaiseException(EExceptionFatality_NonFatal, "Timer 0x%x in invalid state: %d (message ID: 0x%x, receiver: 0x%x)", \
+            timerId, state, GetMessageId(message), receiver);
         return TIMER_ID_INVALID;
     }
+
+    /* We have a valid timer, only now does it make sense to make introductions */
+    char timerName[MAX_TIMER_NAME_LEN];
+    (void) strcpy(timerName, context->Name);
 
     /* Create a timeout event - to be received by the timing daemon */
     em_event_t timeoutEvent = em_alloc(sizeof(TTimerId), EM_EVENT_TYPE_SW, EM_POOL_DEFAULT);
@@ -127,6 +132,114 @@ TTimerId ArmTimer(TTimerId timerId, u64 expires, u64 period, TMessage message, T
     UnlockTimerTableEntry(timerId);
 
     return context->TimerId;
+}
+
+void RetireTimer(TTimerId timerId) {
+
+    AssertTrue(timerId < MAX_TIMER_COUNT);
+
+    LockTimerTableEntry(timerId);
+    STimerContext * context = FetchTimerContext(timerId);
+
+    char timerName[MAX_TIMER_NAME_LEN];
+    em_tmo_t tmo = context->Tmo;
+    ETimerState state = context->State;
+    em_event_t currentEvent = EM_EVENT_UNDEF;
+    em_status_t status;
+
+    switch (state) {
+    case ETimerState_Invalid:
+        /* Timer not in use - just transition to state retired */
+
+        context->State = ETimerState_Retired;
+        UnlockTimerTableEntry(timerId);
+
+        break;
+
+    case ETimerState_Idle:
+        /* Timer allocated by the application, but not running - release its context and
+         * immediately mark it retired */
+
+        /* Release the EM timeout object and context */
+        FinalizeTimerDestruction(context);
+        context->State = ETimerState_Retired;
+        UnlockTimerTableEntry(timerId);
+        break;
+
+    case ETimerState_Armed:
+        /* Disarm the timer, but transition straight to state retired, and ignore setting
+         * the SkipEvents counter if event is already in flight */
+        status = em_tmo_cancel(tmo, &currentEvent);
+        /* We cancelled as quickly as we could, now it's time to copy the name for debug purposes
+         * should something go wrong */
+        (void) strcpy(timerName, context->Name);
+        switch (status) {
+        case EM_OK:
+            /* Timeout cancelled cleanly - timeout event will not be sent */
+
+            /* Event must be valid - free it */
+            AssertTrue(currentEvent != EM_EVENT_UNDEF);
+            em_free(currentEvent);
+
+            /* Transition to idle state and release the message associated with the timer */
+            ChangeStateFromArmedToIdle(context);
+            /* Release the EM timeout object and context */
+            FinalizeTimerDestruction(context);
+            /* Transition to the terminal state */
+            context->State = ETimerState_Retired;
+            UnlockTimerTableEntry(timerId);
+            break;
+
+        case EM_ERR_BAD_STATE:
+            /* Timer in bad state - event has already been sent - but at this point (in shutdown mode)
+             * it is no use to notify the timing daemon about events to be skipped - just transition
+             * to state retired and let the daemon work off of that. */
+
+            /* One-shot EM timers are in use - no event should have been returned */
+            AssertTrue(currentEvent == EM_EVENT_UNDEF);
+
+            /* Transition to idle state and release the message associated with the timer */
+            ChangeStateFromArmedToIdle(context);
+            /* Release the EM timeout object and context */
+            FinalizeTimerDestruction(context);
+            /* Transition to the terminal state */
+            context->State = ETimerState_Retired;
+            UnlockTimerTableEntry(timerId);
+
+            LogPrint(ELogSeverityLevel_Debug, "%s(): Retired timer '%s' (0x%x), but an event has been sent already", \
+                __FUNCTION__, timerName, timerId);
+            break;
+
+        default:
+            /* Timer framework error */
+
+            UnlockTimerTableEntry(timerId);
+            RaiseException(EExceptionFatality_Fatal, \
+                "em_tmo_cancel() returned %d for timer '%s' (0x%x)", \
+                status, timerName, timerId);
+            break;
+        }
+        break;
+
+    case ETimerState_Destroyed:
+        /* Some timeout events are still in flight. This is ok, the timing daemon should handle them
+         * correctly if the timer is in state retired. */
+
+        /* We can safely force-destroy the timer here */
+        FinalizeTimerDestruction(context);
+        context->State = ETimerState_Retired;
+        UnlockTimerTableEntry(timerId);
+
+        break;
+
+    default:
+        /* Timer in corrupted state */
+
+        UnlockTimerTableEntry(timerId);
+        RaiseException(EExceptionFatality_Fatal, \
+            "Timer 0x%x in corrupted state: %d", timerId, state);
+        break;
+    }
 }
 
 TTimerId DisarmTimer(TTimerId timerId) {
@@ -182,7 +295,8 @@ TTimerId DisarmTimer(TTimerId timerId) {
             ChangeStateFromArmedToIdle(context);
             UnlockTimerTableEntry(timerId);
 
-            LogPrint(ELogSeverityLevel_Debug, "%s(): Disarmed timer '%s' (0x%x), but an event has been sent already", \
+            LogPrint(ELogSeverityLevel_Debug, \
+                "%s(): Disarmed timer '%s' (0x%x), but an event has been sent already", \
                 __FUNCTION__, timerName, timerId);
             break;
 
@@ -190,8 +304,9 @@ TTimerId DisarmTimer(TTimerId timerId) {
             /* Timer framework error */
 
             UnlockTimerTableEntry(timerId);
-            RaiseException(EExceptionFatality_Fatal, "%s(): em_tmo_cancel() returned %d for timer '%s' (0x%x)", \
-                __FUNCTION__, status, timerName, timerId);
+            RaiseException(EExceptionFatality_Fatal, \
+                "em_tmo_cancel() returned %d for timer '%s' (0x%x)", \
+                status, timerName, timerId);
             break;
         }
         return timerId;
@@ -209,12 +324,20 @@ TTimerId DisarmTimer(TTimerId timerId) {
         UnlockTimerTableEntry(timerId);
         return timerId;
 
+    case ETimerState_Retired:
+        UnlockTimerTableEntry(timerId);
+        /* Allow calling DisarmTimer for retired timers, but issue a diagnostic nonetheless */
+        LogPrint(ELogSeverityLevel_Info, "%s(): Timer 0x%x already retired", \
+            __FUNCTION__, timerId);
+        /* Return ID to indicate success */
+        return timerId;
+
     default:
         /* Timer in invalid state */
 
         UnlockTimerTableEntry(timerId);
-        RaiseException(EExceptionFatality_NonFatal, "Timer '%s' (0x%x) in invalid state: %d", \
-            timerName, timerId, state);
+        RaiseException(EExceptionFatality_NonFatal, "Timer 0x%x in invalid state: %d", \
+            timerId, state);
         return TIMER_ID_INVALID;
     }
 }
@@ -231,17 +354,27 @@ void DestroyTimer(TTimerId timerId) {
     LockTimerTableEntry(timerId);
     STimerContext * context = FetchTimerContext(timerId);
 
-    char timerName[MAX_TIMER_NAME_LEN];
-    (void) strcpy(timerName, context->Name);
-
     ETimerState state = context->State;
-    if (state != ETimerState_Idle) {
+    if (unlikely(state == ETimerState_Retired)) {
 
         UnlockTimerTableEntry(timerId);
-        RaiseException(EExceptionFatality_NonFatal, "Timer '%s' (0x%x) in invalid state: %d", \
-            timerName, timerId, state);
+        /* Allow calling DestroyTimer for retired timers, but issue a diagnostic nonetheless */
+        LogPrint(ELogSeverityLevel_Info, "%s(): Timer 0x%x already retired", \
+            __FUNCTION__, timerId);
         return;
     }
+
+    if (unlikely(state != ETimerState_Idle)) {
+
+        UnlockTimerTableEntry(timerId);
+        RaiseException(EExceptionFatality_NonFatal, "Timer 0x%x in invalid state: %d", \
+            timerId, state);
+        return;
+    }
+
+    /* We have a valid timer, only now does it make sense to make introductions */
+    char timerName[MAX_TIMER_NAME_LEN];
+    (void) strcpy(timerName, context->Name);
 
     if (context->SkipEvents > 0) {
 
@@ -256,20 +389,7 @@ void DestroyTimer(TTimerId timerId) {
     } else {
 
         /* All timeout events handled - timer can be safely destroyed */
-
-        em_event_t currentEvent;
-        /* Delete the timeout object */
-        AssertTrue(EM_OK == em_tmo_delete(context->Tmo, &currentEvent));
-        context->Tmo = EM_TMO_UNDEF;
-        /* No event could have been returned if the timer had been properly
-         * cancelled */
-        AssertTrue(currentEvent == EM_EVENT_UNDEF);
-
-        /* Sanity-check that no message leak occurs */
-        AssertTrue(context->Message == MESSAGE_INVALID);
-        AssertTrue(context->Receiver == WORKER_ID_INVALID);
-
-        ReleaseTimerContext(timerId);
+        FinalizeTimerDestruction(context);
         UnlockTimerTableEntry(timerId);
         LogPrint(ELogSeverityLevel_Debug, "%s(): Cleanly destroyed timer '%s' (0x%x)", \
             __FUNCTION__, timerName, timerId);
@@ -289,4 +409,21 @@ static inline void ChangeStateFromArmedToIdle(STimerContext * context) {
 
     /* Do the actual state transition */
     context->State = ETimerState_Idle;
+}
+
+static inline void FinalizeTimerDestruction(STimerContext * context) {
+
+    em_event_t currentEvent = EM_EVENT_UNDEF;
+    /* Delete the timeout object */
+    AssertTrue(EM_OK == em_tmo_delete(context->Tmo, &currentEvent));
+    context->Tmo = EM_TMO_UNDEF;
+    /* No event could have been returned if the timer had been properly
+     * cancelled */
+    AssertTrue(currentEvent == EM_EVENT_UNDEF);
+
+    /* Sanity-check that no message leak occurs */
+    AssertTrue(context->Message == MESSAGE_INVALID);
+    AssertTrue(context->Receiver == WORKER_ID_INVALID);
+    /* Release the context */
+    ReleaseTimerContext(context->TimerId);
 }

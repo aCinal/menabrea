@@ -45,5 +45,6 @@ void MarkDeploymentSuccessful(TWorkerId workerId);
 void MarkTeardownInProgress(TWorkerId workerId);
 void LockWorkerTableEntry(TWorkerId workerId);
 void UnlockWorkerTableEntry(TWorkerId workerId);
+void DisableWorkerDeployment(void);
 
 #endif /* PLATFORM_COMPONENTS_WORKERS_WORKER_TABLE_H */

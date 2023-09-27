@@ -95,7 +95,14 @@ static void UdsInputPollCallback(void) {
     };
 
     int ret = poll(&pollfd, 1, 0);
-    AssertTrue(ret != -1);
+    if (unlikely(ret == -1)) {
+
+        /* poll is one of the interfaces that do not get restarted after being
+         * interrupted by a signal, even if SA_RESTART is used. Handle such
+         * interruptions gracefully. */
+        AssertTrue(EINTR == errno);
+        return;
+    }
 
     if (unlikely(ret > 0)) {
 

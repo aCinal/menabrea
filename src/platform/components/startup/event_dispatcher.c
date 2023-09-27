@@ -6,7 +6,10 @@
 #include <log/log.h>
 #include <log/runtime_logger.h>
 #include <log/startup_logger.h>
+#include <memory/memory.h>
 #include <timing/setup.h>
+#include <timing/timer_table.h>
+#include <workers/worker_table.h>
 #include <menabrea/exception.h>
 #include <menabrea/log.h>
 #include <menabrea/common.h>
@@ -212,9 +215,13 @@ static inline void RunMainDispatcher(void) {
     RunPlatformGlobalInit();
     /* Give the applications a chance to initialize before the fork */
     RunApplicationsGlobalInits();
+    /* About to fork, no more init memory allocations */
+    DisableInitMemoryAllocation();
     SChildren * children = ForkChildDispatchers();
     /* Common code shared by all dispatchers */
     DispatcherEntryPoint();
+    /* Cancel any timers left running by the application after local exits */
+    RetireAllTimers();
     /* Run global exits while other cores are still dispatching */
     RunApplicationsGlobalExits();
     /* Release the child dispatchers to complete application global exit */
@@ -257,8 +264,6 @@ static inline void RunPlatformGlobalTeardown(void) {
 
     /* Deregister an em_send() hook exposed by the input component */
     AssertTrue(EM_OK == em_hooks_unregister_send(EmApiHookSend));
-    /* Cancel any timers left running by the application */
-    CancelAllTimers();
     /* Tear down any workers left behind by the application */
     TerminateAllWorkers();
     /* Keep the other cores dispatching while terminating workers
@@ -306,6 +311,10 @@ static inline void DispatcherEntryPoint(void) {
         "Dispatcher %d exited the main dispatch loop. Disabling input polling...", \
         core);
     DisableInputPolling();
+
+    /* Prevent applications from allocating extra resources in shutdown code */
+    DisableTimerAllocation();
+    DisableWorkerDeployment();
 
     RunApplicationsLocalExits();
     LogPrint(ELogSeverityLevel_Debug, "Local exit complete on core %d", core);

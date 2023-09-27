@@ -4,6 +4,6 @@
 
 void TimingInit(void);
 void TimingTeardown(void);
-void CancelAllTimers(void);
+void RetireAllTimers(void);
 
 #endif /* PLATFORM_COMPONENTS_TIMING_SETUP_H */

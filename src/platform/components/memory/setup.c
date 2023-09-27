@@ -1,4 +1,5 @@
 #include <memory/setup.h>
+#include <memory/memory.h>
 #include <menabrea/log.h>
 #include <menabrea/exception.h>
 
@@ -14,4 +15,5 @@ void MemoryTeardown(void) {
 
     LogPrint(ELogSeverityLevel_Info, "Deleting the runtime shared memory pool...");
     AssertTrue(EM_OK ==  em_pool_delete(RUNTIME_SHMEM_EVENT_POOL));
+    ReleaseInitMemory();
 }

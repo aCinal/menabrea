@@ -80,6 +80,10 @@ void Init(void) {
 
 void Teardown(void) {
 
+    if (s_currentState == State::Busy) {
+
+        StopOngoingTest();
+    }
     TerminateWorker(s_listenerId);
 }
 

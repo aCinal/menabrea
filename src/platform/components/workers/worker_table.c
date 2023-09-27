@@ -21,6 +21,7 @@ typedef struct SDynamicIdFifo {
 static SDynamicIdFifo * s_idFifo;
 static SWorkerContext * s_workerTable[MAX_WORKER_COUNT];
 static TWorkerId s_ownNodeId = WORKER_ID_INVALID;
+static bool s_allowAllocations;
 
 void WorkerTableInit(TWorkerId nodeId) {
 
@@ -60,6 +61,9 @@ void WorkerTableInit(TWorkerId nodeId) {
         SpinlockInit(&s_workerTable[i]->Lock);
         ResetContext(s_workerTable[i]);
     }
+
+    /* Worker deployment henceforth possible */
+    s_allowAllocations = true;
 }
 
 void WorkerTableTeardown(void) {
@@ -76,6 +80,14 @@ void WorkerTableTeardown(void) {
 }
 
 SWorkerContext * ReserveWorkerContext(TWorkerId workerId) {
+
+    if (unlikely(s_allowAllocations == false)) {
+
+        /* We are in shutdown mode, allocations disabled */
+        RaiseException(EExceptionFatality_NonFatal, \
+            "Worker context allocations disabled");
+        return NULL;
+    }
 
     if (workerId == WORKER_ID_INVALID) {
 
@@ -204,6 +216,12 @@ TWorkerId GetOwnNodeId(void) {
     /* Assert node ID has been configured */
     AssertTrue(s_ownNodeId != WORKER_ID_INVALID);
     return s_ownNodeId;
+}
+
+void DisableWorkerDeployment(void) {
+
+    /* Disable context allocations on this core */
+    s_allowAllocations = false;
 }
 
 static void ResetContext(SWorkerContext * context) {

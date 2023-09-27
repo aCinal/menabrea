@@ -128,6 +128,7 @@ typedef struct SWorkerConfig {
  * @brief Create and start a worker
  * @param config Worker configuration
  * @return Worker ID on success, WORKER_ID_INVALID on failure
+ * @note This function should not be called in exit code (local and global alike)
  * @see WORKER_ID_INVALID
  */
 TWorkerId DeployWorker(const SWorkerConfig * config);
@@ -139,6 +140,7 @@ TWorkerId DeployWorker(const SWorkerConfig * config);
  * @param coreMask Mask of cores on which the worker is allowed to run
  * @param body Worker body executed when a message is sent to the worker
  * @return Worker ID on success, WORKER_ID_INVALID on failure
+ * @note This function should not be called in exit code (local and global alike)
  * @see WORKER_ID_INVALID
  */
 static inline TWorkerId DeploySimpleWorker(const char * name, TWorkerId id, int coreMask, TUserHandlerCallback body) {
@@ -160,6 +162,7 @@ static inline TWorkerId DeploySimpleWorker(const char * name, TWorkerId id, int 
  * @param coreMask Mask of cores on which the worker is allowed to run
  * @param body Worker body executed when a message is sent to the worker
  * @return Worker ID on success, WORKER_ID_INVALID on failure
+ * @note This function should not be called in exit code (local and global alike)
  * @see WORKER_ID_INVALID
  */
 static inline TWorkerId DeploySimpleParallelWorker(const char * name, TWorkerId id, int coreMask, TUserHandlerCallback body) {

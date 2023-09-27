@@ -22,6 +22,7 @@ ODP_STATIC_ASSERT(TIMER_ID_INVALID > MAX_TIMER_COUNT, \
  * @brief Create a timer
  * @param name Human-readable timer name
  * @return Timer ID or TIMER_ID_INVALID on failure
+ * @note This function should not be called in exit code (local and global alike)
  * @see TIMER_ID_INVALID
  */
 TTimerId CreateTimer(const char * name);
@@ -37,6 +38,7 @@ TTimerId CreateTimer(const char * name);
  * @note If a call to this function succeeds (return value is not TIMER_ID_INVALID), the ownership
  *       of the message is relinquished and the platform is responsible for the message delivery
  *       or destruction
+ * @note This function should not be called in exit code (local and global alike)
  * @see TIMER_ID_INVALID
  */
 TTimerId ArmTimer(TTimerId timerId, u64 expires, u64 period, TMessage message, TWorkerId receiver);

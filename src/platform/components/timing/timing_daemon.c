@@ -194,6 +194,15 @@ static inline void HandleTimeoutEvent(em_event_t event) {
         }
         break;
 
+    case ETimerState_Retired:
+        /* Timer already retired, it's associated message has been released in RetireTimer.
+         * Nothing to do for us here. */
+        em_free(event);
+        UnlockTimerTableEntry(timerId);
+        LogPrint(ELogSeverityLevel_Debug, \
+            "Timer 0x%x already retired. Ignoring late event...", timerId);
+        break;
+
     default:
         /* Timer in invalid state */
 

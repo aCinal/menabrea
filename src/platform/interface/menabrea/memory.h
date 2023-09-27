@@ -12,30 +12,10 @@ extern "C" {
  * @brief Allocate shared memory at global init time
  * @param size Size of the allocation
  * @return Memory address or NULL if the request could not be satisfied
- * @note Memory obtained via this function is shared by all cores only if allocated during global
- *       init. Otherwise the memory is only valid on the calling core.
+ * @note This function can only be used at global init time. Memory obtained this way
+ *       is automatically released by the platform during shutdown.
  */
-static inline void * GetInitMemory(u32 size) { return env_shared_malloc(size); }
-
-/**
- * @brief Reserve named shared memory region and return a pointer to it
- * @param name Name of the shared memory region
- * @param size Size of the allocation
- * @return Memory address or NULL if the request could not be satisfied
- * @note If this is called during global init, the address remains valid on all cores after the fork. Otherwise,
- *       remaining cores must call AttachNamedMemory to get access to the shared memory region
- * @see AttachNamedMemory
- */
-static inline void * ReserveNamedMemory(const char * name, u32 size) { return env_shared_reserve(name, size); }
-
-/**
- * @brief Look up a shared memory region by name
- * @param name Name of the shared memory region
- * @return Memory address or NULL if lookup failed
- * @warning Pointers to the named memory need not be the same on all cores and thus should not be shared
- * @see ReserveNamedMemory
- */
-static inline void * AttachNamedMemory(const char * name) { return env_shared_lookup(name); }
+void * GetInitMemory(u32 size);
 
 /**
  * @brief Allocate shared, reference-counted memory at runtime

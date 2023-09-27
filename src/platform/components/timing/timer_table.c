@@ -18,6 +18,7 @@ typedef struct STimerIdFifo {
 
 static STimerIdFifo * s_idFifo;
 static STimerContext * s_timerTable;
+static bool s_allowAllocations;
 
 void TimerTableInit(void) {
 
@@ -57,6 +58,9 @@ void TimerTableInit(void) {
         SpinlockInit(&s_timerTable[i].Lock);
         ResetContext(&s_timerTable[i]);
     }
+
+    /* Timer creation henceforth possible */
+    s_allowAllocations = true;
 }
 
 void TimerTableTeardown(void) {
@@ -68,6 +72,14 @@ void TimerTableTeardown(void) {
 }
 
 STimerContext * ReserveTimerContext(void) {
+
+    if (unlikely(s_allowAllocations == false)) {
+
+        /* We are in shutdown mode, allocations disabled */
+        RaiseException(EExceptionFatality_NonFatal, \
+            "Timer context allocations disabled");
+        return NULL;
+    }
 
     TTimerId id = AllocateTimerId();
     if (unlikely(id == TIMER_ID_INVALID)) {
@@ -111,6 +123,12 @@ void UnlockTimerTableEntry(TTimerId timerId) {
 
     AssertTrue(timerId < MAX_TIMER_COUNT);
     SpinlockRelease(&s_timerTable[timerId].Lock);
+}
+
+void DisableTimerAllocation(void) {
+
+    /* Disable context allocations on this core */
+    s_allowAllocations = false;
 }
 
 static void ResetContext(STimerContext * context) {

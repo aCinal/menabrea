@@ -2,11 +2,10 @@
 #include <timing/timer_instance.h>
 #include <timing/timing_daemon.h>
 #include <timing/timer_table.h>
+#include <timing/timing.h>
 #include <menabrea/timing.h>
 #include <menabrea/log.h>
 #include <menabrea/exception.h>
-
-static inline void DestroyAllTimers(void);
 
 void TimingInit(void) {
 
@@ -22,41 +21,20 @@ void TimingInit(void) {
 
 void TimingTeardown(void) {
 
-    DestroyAllTimers();
-
     TimerTableTeardown();
     DeleteTimerInstance();
     TimingDaemonTeardown();
 }
 
-void CancelAllTimers(void) {
+void RetireAllTimers(void) {
 
-    LogPrint(ELogSeverityLevel_Debug, "Cancelling any remaining timers...");
-
-    for (TTimerId i = 0; i < MAX_TIMER_COUNT; i++) {
-
-        /* Do not do any locking (simulate application perspective) - a timer may
-         * change state from ETimerState_Armed to ETimerState_Idle in the meantime
-         * - the implementation should handle this gracefully. */
-        STimerContext * context = FetchTimerContext(i);
-        if (context->State == ETimerState_Armed) {
-
-            DisarmTimer(i);
-        }
-    }
-}
-
-static inline void DestroyAllTimers(void) {
+    /* Timers run asynchronously with regards to platform code (completely within EM),
+     * so we add a terminal state to their state machines. The timing daemon recognizes
+     * this "retired" state and shall drop any outstanding notifications from expired timers. */
+    LogPrint(ELogSeverityLevel_Info, "Retiring all timers...");
 
     for (TTimerId i = 0; i < MAX_TIMER_COUNT; i++) {
 
-        STimerContext * context = FetchTimerContext(i);
-        /* Only idle and inactive timers can exist at this point */
-        AssertTrue(context->State != ETimerState_Armed);
-        AssertTrue(context->State != ETimerState_Destroyed);
-        if (context->State == ETimerState_Idle) {
-
-            DestroyTimer(i);
-        }
+        RetireTimer(i);
     }
 }

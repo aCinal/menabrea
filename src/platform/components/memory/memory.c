@@ -3,7 +3,7 @@
 #include <menabrea/common.h>
 #include <menabrea/exception.h>
 #include <menabrea/log.h>
-#include <menabrea/cores.h>
+#include <stdlib.h>
 
 #define RUNTIME_SHM_MAGIC  ( (u32) 0x008E8041 )
 
@@ -12,6 +12,63 @@ typedef struct SRuntimeMemoryHeader {
     env_atomic32_t References;
     em_event_t Event;
 } SRuntimeMemoryHeader __attribute__((aligned(8)));  /* Align to 64 bits */
+
+typedef struct SInitMemoryDebt {
+    void * Block;
+    struct SInitMemoryDebt * Next;
+} SInitMemoryDebt;
+
+static SInitMemoryDebt * s_initMemoryDebtStack = NULL;
+static bool s_allowInitMemoryAllocations = true;
+
+void * GetInitMemory(u32 size) {
+
+    void * ptr = NULL;
+    if (s_allowInitMemoryAllocations) {
+
+        ptr = env_shared_malloc(size);
+        if (ptr) {
+
+            /* Push the init memory onto a stack so that it can be relased by the platform at shutdown */
+            SInitMemoryDebt * debtEntry = malloc(sizeof(SInitMemoryDebt));
+            AssertTrue(debtEntry);
+            debtEntry->Block = ptr;
+            debtEntry->Next = s_initMemoryDebtStack;
+            s_initMemoryDebtStack = debtEntry;
+        }
+
+    } else {
+
+        RaiseException(EExceptionFatality_NonFatal, \
+            "Init memory can only be allocated at global init time");
+    }
+
+    return ptr;
+}
+
+void DisableInitMemoryAllocation(void) {
+
+    s_allowInitMemoryAllocations = false;
+}
+
+void ReleaseInitMemory(void) {
+
+    LogPrint(ELogSeverityLevel_Info, "Releasing init memory...");
+
+    /* Walk the stack of application allocations and release each block */
+    while (s_initMemoryDebtStack) {
+
+        SInitMemoryDebt * debtEntry = s_initMemoryDebtStack;
+        SInitMemoryDebt * next = debtEntry->Next;
+
+        /* Release the application memory block */
+        env_shared_free(debtEntry->Block);
+        /* Release the bookkeeping data */
+        free(debtEntry);
+
+        s_initMemoryDebtStack = next;
+    }
+}
 
 void * GetRuntimeMemory(u32 size) {
 

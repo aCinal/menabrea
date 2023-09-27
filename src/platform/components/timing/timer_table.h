@@ -13,7 +13,8 @@ typedef enum ETimerState {
     ETimerState_Invalid = 0,
     ETimerState_Idle,
     ETimerState_Armed,
-    ETimerState_Destroyed
+    ETimerState_Destroyed,
+    ETimerState_Retired
 } ETimerState;
 
 typedef struct STimerContext {
@@ -38,5 +39,6 @@ void ReleaseTimerContext(TTimerId timerId);
 STimerContext * FetchTimerContext(TTimerId timerId);
 void LockTimerTableEntry(TTimerId timerId);
 void UnlockTimerTableEntry(TTimerId timerId);
+void DisableTimerAllocation(void);
 
 #endif /* PLATFORM_COMPONENTS_TIMING_TIMER_TABLE_H */
