@@ -11,7 +11,8 @@ typedef struct SRuntimeMemoryHeader {
     u32 Magic;
     env_atomic32_t References;
     em_event_t Event;
-} SRuntimeMemoryHeader __attribute__((aligned(8)));  /* Align to 64 bits */
+    u8 _pad[0] __attribute__((aligned(8)));  /* Pad to have the size be a multiple of 64 bits */
+} SRuntimeMemoryHeader;
 
 typedef struct SInitMemoryDebt {
     void * Block;

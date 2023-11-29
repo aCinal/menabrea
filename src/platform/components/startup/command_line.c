@@ -29,9 +29,15 @@ SStartupParams * ParseCommandLine(int argc, char **argv) {
     };
     int optionIndex;
 
-    while (-1 != getopt_long(argc, argv, "", longOptions, &optionIndex)) {
+    int ret;
+    while ((ret = getopt_long(argc, argv, "", longOptions, &optionIndex)) != -1) {
 
         char * endptr;
+        if (ret == '?') {
+
+            RaiseException(EExceptionFatality_Fatal, \
+                "getopt_long() failed to handle argument: %s", argv[optind - 1]);
+        }
 
         /* Find the corresponding long option - in each case assert
          * that the order in the longOptions structure was not
@@ -90,7 +96,7 @@ SStartupParams * ParseCommandLine(int argc, char **argv) {
             break;
 
         default:
-            /* Should never get here */
+            /* Should never get here - sanity-check ourselves */
             RaiseException(EExceptionFatality_Fatal, \
                 "getopt_long() returned unexpected optionIndex: %d", optionIndex);
             break;

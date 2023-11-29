@@ -5,7 +5,7 @@
 #include <menabrea/messaging.h>
 
 #define MESSAGE_HEADER_MAGIC  ( (u16) 0xF321 )
-#define MESSAGE_HEADER_LEN    12
+#define MESSAGE_HEADER_LEN    16
 
 typedef struct SMessageHeader {
     u32 PayloadSize;
@@ -13,6 +13,7 @@ typedef struct SMessageHeader {
     TWorkerId Receiver;
     TMessageId MessageId;
     u16 Magic;
+    u32 Unused;  /* Pad to have the size be a multiple of 64 bits */
 } SMessageHeader;
 
 typedef struct SMessage {

@@ -14,6 +14,7 @@ TMessage CreateMessage(TMessageId msgId, u32 payloadSize) {
         msgData->Header.Sender = WORKER_ID_INVALID;
         msgData->Header.Receiver = WORKER_ID_INVALID;
         msgData->Header.Magic = MESSAGE_HEADER_MAGIC;
+        msgData->Header.Unused = 0;
     }
 
     return event;
