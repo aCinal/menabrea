@@ -7,4 +7,4 @@ set_target_properties(echo
     PROPERTIES
     VERSION 1.0.0)
 
-install (TARGETS echo RUNTIME)
+install(TARGETS echo RUNTIME)

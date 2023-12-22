@@ -56,9 +56,9 @@ int EmInputPollFunction(void) {
 
     if (likely(s_pollingEnabled)) {
 
+        int core = em_core_id();
         for (u32 i = 0; i < s_numOfCallbacks; i++) {
 
-            int core = em_core_id();
             if (s_inputPollCallbacks[i].CoreMask & (1 << core)) {
 
                 s_inputPollCallbacks[i].Callback();

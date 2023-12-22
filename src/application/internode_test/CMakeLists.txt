@@ -7,4 +7,4 @@ set_target_properties(internode
     PROPERTIES
     VERSION 1.0.0)
 
-install (TARGETS internode RUNTIME)
+install(TARGETS internode RUNTIME)

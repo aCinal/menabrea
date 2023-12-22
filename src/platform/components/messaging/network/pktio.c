@@ -8,8 +8,6 @@
 static em_pool_t CreatePacketPool(u32 bufCount);
 static odp_pktio_t CreatePktioDevice(const char * ifName, odp_pool_t odpPool);
 static void CreatePktioQueues(odp_pktio_t pktio);
-/* TODO: Remove this once socket_mmap issue is resolved (see below) */
-static char * ForcePktioImplementation(const char * pktioType, const char * ifName);
 
 static odp_pktio_t s_pktio;
 static odp_pktin_queue_t s_pktinQueue;
@@ -94,14 +92,9 @@ static odp_pktio_t CreatePktioDevice(const char * ifName, odp_pool_t odpPool) {
 
     LogPrint(ELogSeverityLevel_Info, "Creating a pktio device '%s'...", ifName);
 
-    /* TODO: Find out why socket_mmap driver/implementation fails for packets with no L2 padding (i.e. packets with total size > 64).
-     * It seems no FCS gets added to the frame on the wire and the receiver then assumes the last four bytes of the payload are the
-     * FCS and drops the packet. Find if this is a problem with ODP/pktio or the RPi eth driver (genet) and fix it. */
-    char * devName = ForcePktioImplementation("socket", ifName);
     /* Create a pktio device */
-    odp_pktio_t pktio = odp_pktio_open(devName, odpPool, &pktioParams);
+    odp_pktio_t pktio = odp_pktio_open(ifName, odpPool, &pktioParams);
     AssertTrue(pktio != ODP_PKTIO_INVALID);
-    free(devName);
 
     odp_pktio_info_t pktioInfo;
     /* Query device information */
@@ -139,23 +132,4 @@ static void CreatePktioQueues(odp_pktio_t pktio) {
     /* Create input and output queues */
     AssertTrue(1 == odp_pktin_queue(pktio, &s_pktinQueue, 1));
     AssertTrue(1 == odp_pktout_event_queue(pktio, &s_pktoutQueue, 1));
-}
-
-static char * ForcePktioImplementation(const char * pktioType, const char * ifName) {
-
-    /* Force a pktio implementation */
-
-    size_t typeLen = strlen(pktioType);
-    size_t ifNameLen = strlen(ifName);
-
-    /* Allocate a buffer for a fully-qualified pktio device name
-     * - reserve space for a colon and the NULL-terminator */
-    char * qualifiedDevName = malloc(typeLen + 1 + ifNameLen + 1);
-    AssertTrue(qualifiedDevName != NULL);
-    (void) strcpy(qualifiedDevName, pktioType);
-    (void) strcpy(qualifiedDevName + typeLen, ":");
-    (void) strcpy(qualifiedDevName + typeLen + 1, ifName);
-    qualifiedDevName[typeLen + 1 + ifNameLen] = '\0';
-
-    return qualifiedDevName;
 }
