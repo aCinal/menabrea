@@ -8,6 +8,7 @@
 
 typedef struct SInputPollCallback {
     TInputPollCallback Callback;
+    void * Argument;
     int CoreMask;
 } SInputPollCallback;
 
@@ -20,7 +21,7 @@ static bool s_pollingEnabled = false;
 static bool s_inInputPollCallback = false;
 static int s_totalEventsEnqueued = 0;
 
-void RegisterInputPolling(TInputPollCallback callback, int coreMask) {
+void RegisterInputPolling(TInputPollCallback callback, void * callbackArgument, int coreMask) {
 
     if (unlikely(callback == NULL)) {
 
@@ -37,6 +38,7 @@ void RegisterInputPolling(TInputPollCallback callback, int coreMask) {
     if (s_numOfCallbacks < MAX_INPUT_CALLBACKS) {
 
         s_inputPollCallbacks[s_numOfCallbacks].Callback = callback;
+        s_inputPollCallbacks[s_numOfCallbacks].Argument = callbackArgument;
         s_inputPollCallbacks[s_numOfCallbacks].CoreMask = coreMask;
         s_numOfCallbacks++;
         LogPrint(ELogSeverityLevel_Debug, "%s(): Registered input poll callback at %p on cores 0x%x", \
@@ -61,7 +63,8 @@ int EmInputPollFunction(void) {
 
             if (s_inputPollCallbacks[i].CoreMask & (1 << core)) {
 
-                s_inputPollCallbacks[i].Callback();
+                void * arg = s_inputPollCallbacks[i].Argument;
+                s_inputPollCallbacks[i].Callback(arg);
             }
         }
     }

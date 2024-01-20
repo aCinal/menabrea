@@ -62,7 +62,7 @@ void LogPrintV(ELogSeverityLevel severity, const char * format, va_list args) {
     (void) gmtime_r(&ts.tv_sec, &tm);
     /* Format the timestamp */
     size_t dateLen = strftime(date, sizeof(date), "%a %b %d %T", &tm);
-    /* Assert the formatted date fit in the buffer */
+    /* Assert the formatted date fits in the buffer */
     assert(dateLen > 0);
     size_t timestampLen = \
         snprintf(timestamp, sizeof(timestamp), "%s.%09ld", date, ts.tv_nsec);

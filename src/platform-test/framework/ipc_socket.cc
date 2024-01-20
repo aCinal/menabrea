@@ -15,7 +15,7 @@
 #include <stdio.h>
 
 static int CreateListeningSocket(const char * name);
-static void UdsInputPollCallback(void);
+static void UdsInputPollCallback(void * arg);
 static void HandleConnectionSocketEvent(short events);
 
 static constexpr const char * UDS_NAME = "/tmp/test_framework.sock";
@@ -37,7 +37,7 @@ void IpcSocket::Init(void) {
 
     /* Request input polling on the shared core only to not worry about passing connection
      * descriptors between processes */
-    RegisterInputPolling(UdsInputPollCallback, GetSharedCoreMask());
+    RegisterInputPolling(UdsInputPollCallback, nullptr, GetSharedCoreMask());
 }
 
 void IpcSocket::Teardown(void) {
@@ -86,7 +86,9 @@ static int CreateListeningSocket(const char * name) {
     return fd;
 }
 
-static void UdsInputPollCallback(void) {
+static void UdsInputPollCallback(void * arg) {
+
+    (void) arg;
 
     AssertTrue(s_pollableDescriptor != -1);
     struct pollfd pollfd = {

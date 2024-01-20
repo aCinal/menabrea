@@ -15,7 +15,7 @@
 #define ORIGINAL_MAC_PATH  "/tmp/.original_mac"
 
 static void SaveMacInFile(const char * filename, const u8 * mac);
-static void NetworkInputPoll(void);
+static void NetworkInputPoll(void * arg);
 
 static u8 s_originalMacAddr[MAC_ADDR_LEN];
 static char s_ifName[IFNAMSIZ];
@@ -56,7 +56,7 @@ void MessagingNetworkInit(SNetworkingConfig * config) {
     RouterInit();
 
     /* Register an input poll callback */
-    RegisterInputPolling(NetworkInputPoll, GetAllCoresMask());
+    RegisterInputPolling(NetworkInputPoll, NULL, GetAllCoresMask());
 }
 
 void MessagingNetworkTeardown(void) {
@@ -81,7 +81,9 @@ static void SaveMacInFile(const char * filename, const u8 * mac) {
     AssertTrue(0 == close(fd));
 }
 
-static void NetworkInputPoll(void) {
+static void NetworkInputPoll(void * arg) {
+
+    (void) arg;
 
     odp_packet_t packets[MAX_RX_BURST];
     int packetsReceived = odp_pktin_recv(GetPktinQueue(), packets, MAX_RX_BURST);
