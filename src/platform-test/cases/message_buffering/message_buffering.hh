@@ -2,7 +2,7 @@
 #ifndef PLATFORM_TEST_CASES_MESSAGE_BUFFERING_MESSAGE_BUFFERING_HH
 #define PLATFORM_TEST_CASES_MESSAGE_BUFFERING_MESSAGE_BUFFERING_HH
 
-#include <framework/test_case.hh>
+#include <menabrea/test/test_case.hh>
 
 class TestMessageBuffering : public TestCase::Instance {
 public:

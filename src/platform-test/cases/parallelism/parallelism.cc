@@ -1,6 +1,5 @@
 #include "parallelism.hh"
-#include <framework/test_runner.hh>
-#include <framework/params_parser.hh>
+#include <menabrea/test/params_parser.hh>
 #include <menabrea/workers.h>
 #include <menabrea/messaging.h>
 #include <menabrea/memory.h>
@@ -327,13 +326,13 @@ static void WorkerBody(TMessage message) {
             u64 counterValue = ReadFinalCounterValue();
             if (counterValue == data->SharedData->ExpectedValue) {
 
-                TestRunner::ReportTestResult(TestCase::Result::Success);
+                TestCase::ReportTestResult(TestCase::Result::Success);
 
             } else {
 
                 LogPrint(ELogSeverityLevel_Warning, "Incorrect counter value: %ld, expected: %ld", \
                     counterValue, data->SharedData->ExpectedValue);
-                TestRunner::ReportTestResult(TestCase::Result::Failure, \
+                TestCase::ReportTestResult(TestCase::Result::Failure, \
                     "Incorrect counter value: %ld, expected: %ld", \
                     counterValue, data->SharedData->ExpectedValue);
             }

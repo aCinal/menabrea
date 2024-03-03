@@ -1,6 +1,5 @@
 #include "oneshot_timer.hh"
-#include <framework/test_runner.hh>
-#include <framework/params_parser.hh>
+#include <menabrea/test/params_parser.hh>
 #include <menabrea/workers.h>
 #include <menabrea/messaging.h>
 #include <menabrea/timing.h>
@@ -143,7 +142,7 @@ static void ReceiverBody(TMessage message) {
 
         LogPrint(ELogSeverityLevel_Warning, "Worker 0x%x received unexpected message 0x%x from 0x%x. Failing the test...", \
             GetOwnWorkerId(), GetMessageId(message), GetMessageSender(message));
-        TestRunner::ReportTestResult(TestCase::Result::Failure, "Received unexpected message 0x%x from 0x%x", \
+        TestCase::ReportTestResult(TestCase::Result::Failure, "Received unexpected message 0x%x from 0x%x", \
             GetMessageId(message), GetMessageSender(message));
         DestroyMessage(message);
         return;
@@ -156,7 +155,7 @@ static void ReceiverBody(TMessage message) {
         u64 expirationTime = std::chrono::duration_cast<std::chrono::microseconds>(currentTime - shmem->TimeWhenArmed).count();
         if (expirationTime > shmem->ExpirationTime + shmem->MaxError or expirationTime < std::min(0UL, shmem->ExpirationTime - shmem->MaxError)) {
 
-            TestRunner::ReportTestResult(TestCase::Result::Failure, \
+            TestCase::ReportTestResult(TestCase::Result::Failure, \
                 "Observed expiration time %ld significantly different from expected %ld (max error allowed: %ld)", \
                 expirationTime, shmem->ExpirationTime, shmem->MaxError);
             LogPrint(ELogSeverityLevel_Error, \
@@ -170,14 +169,14 @@ static void ReceiverBody(TMessage message) {
 
     if (shmem->MessagesReceived == shmem->MaxMessages) {
 
-        TestRunner::ReportTestResult(TestCase::Result::Success);
+        TestCase::ReportTestResult(TestCase::Result::Success);
     }
 
     DestroyMessage(message);
 
     if (unlikely(ArmTimerUnderTest(shmem->TimerId, shmem->ExpirationTime, GetOwnWorkerId(), shmem->TimeWhenArmed))) {
 
-        TestRunner::ReportTestResult(TestCase::Result::Failure, \
+        TestCase::ReportTestResult(TestCase::Result::Failure, \
             "Failed to rearm the timer after %d iteration(s)", \
             shmem->MessagesReceived);
         LogPrint(ELogSeverityLevel_Error, "Failed to rearm timer 0x%x after %d iteration(s)", \

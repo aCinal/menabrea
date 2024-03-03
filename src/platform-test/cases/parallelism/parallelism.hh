@@ -2,7 +2,7 @@
 #ifndef PLATFORM_TEST_CASES_PARALLELISM_PARALLELISM_HH
 #define PLATFORM_TEST_CASES_PARALLELISM_PARALLELISM_HH
 
-#include <framework/test_case.hh>
+#include <menabrea/test/test_case.hh>
 
 class TestParallelism : public TestCase::Instance {
 public:

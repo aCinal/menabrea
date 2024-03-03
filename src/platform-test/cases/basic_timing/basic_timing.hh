@@ -2,7 +2,7 @@
 #ifndef PLATFORM_TEST_CASES_BASIC_TIMING_BASIC_TIMING_HH
 #define PLATFORM_TEST_CASES_BASIC_TIMING_BASIC_TIMING_HH
 
-#include <framework/test_case.hh>
+#include <menabrea/test/test_case.hh>
 
 class TestBasicTiming : public TestCase::Instance {
 public:

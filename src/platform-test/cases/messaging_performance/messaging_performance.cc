@@ -1,6 +1,5 @@
 #include "messaging_performance.hh"
-#include <framework/test_runner.hh>
-#include <framework/params_parser.hh>
+#include <menabrea/test/params_parser.hh>
 #include <menabrea/workers.h>
 #include <menabrea/messaging.h>
 #include <menabrea/timing.h>
@@ -105,9 +104,9 @@ int TestMessagingPerformance::ParseParams(char * paramsIn, void * paramsOut) {
     return 0;
 }
 
-int TestMessagingPerformance::StartTest(void * arg) {
+int TestMessagingPerformance::StartTest(void * args) {
 
-    TestMessagingPerformanceParams * params = static_cast<TestMessagingPerformanceParams *>(arg);
+    TestMessagingPerformanceParams * params = static_cast<TestMessagingPerformanceParams *>(args);
 
     PerfTestShmem * testSharedMemory = \
         static_cast<PerfTestShmem *>(GetRuntimeMemory(sizeof(PerfTestShmem)));
@@ -277,7 +276,7 @@ static void HandlePerfTestMsg(TMessage message) {
 
         LogPrint(ELogSeverityLevel_Error, "Received performance test message 0x%x from an unexpected source 0x%x (expected: 0x%x)", \
             PERF_TEST_MSG_ID, GetMessageSender(message), shmem->TestParams.EchoId);
-        TestRunner::ReportTestResult(TestCase::Result::Failure, \
+        TestCase::ReportTestResult(TestCase::Result::Failure, \
             "Received performance test message 0x%x from an unexpected source 0x%x (expected: 0x%x)", \
             PERF_TEST_MSG_ID, GetMessageSender(message), shmem->TestParams.EchoId);
     }
@@ -294,7 +293,7 @@ static void HandleTimeoutMsg(TMessage message) {
 
             LogPrint(ELogSeverityLevel_Error, \
                 "Total throughput counter wrapped when trying to calculate the average");
-            TestRunner::ReportTestResult(TestCase::Result::Failure, \
+            TestCase::ReportTestResult(TestCase::Result::Failure, \
                 "Total throughput counter wrapped when trying to calculate the average");
             return;
         }
@@ -315,7 +314,7 @@ static void HandleTimeoutMsg(TMessage message) {
                 "Latency: avg=%ld, max=%ld, min=%ld [us], throughput=%ld [b/ms]", \
                 shmem->AverageLatency, shmem->MaxLatency, shmem->MinLatency,
                 averageThroughput);
-            TestRunner::ReportTestResult(TestCase::Result::Success, \
+            TestCase::ReportTestResult(TestCase::Result::Success, \
                 "Latency: avg=%ld, max=%ld, min=%ld [us], throughput=%ld [b/ms]", \
                 shmem->AverageLatency, shmem->MaxLatency, shmem->MinLatency, \
                 averageThroughput);
@@ -352,7 +351,7 @@ static void SendTestMessages(void) {
                 DestroyMessage(pmem->BurstBuffer[j]);
             }
             /* Report failure and return */
-            TestRunner::ReportTestResult(TestCase::Result::Failure, \
+            TestCase::ReportTestResult(TestCase::Result::Failure, \
                 "Failed to create message %d in a burst of %d", \
                 i, shmem->TestParams.Burst);
             return;
@@ -381,7 +380,7 @@ static void MeasurePerformance(TMessage message) {
     if (unlikely(currentTime < hdr->Timestamp)) {
 
         LogPrint(ELogSeverityLevel_Error, "Clock's counter wrapped");
-        TestRunner::ReportTestResult(TestCase::Result::Failure, \
+        TestCase::ReportTestResult(TestCase::Result::Failure, \
             "Clock's counter wrapped");
         return;
     }
@@ -397,7 +396,7 @@ static void MeasurePerformance(TMessage message) {
 
         SpinlockRelease(&shmem->ResultsLock);
         LogPrint(ELogSeverityLevel_Error, "Total latency counter wrapped");
-        TestRunner::ReportTestResult(TestCase::Result::Failure, \
+        TestCase::ReportTestResult(TestCase::Result::Failure, \
             "Total latency counter wrapped");
         return;
     }
@@ -407,7 +406,7 @@ static void MeasurePerformance(TMessage message) {
 
         SpinlockRelease(&shmem->ResultsLock);
         LogPrint(ELogSeverityLevel_Error, "Total throughput counter wrapped");
-        TestRunner::ReportTestResult(TestCase::Result::Failure, \
+        TestCase::ReportTestResult(TestCase::Result::Failure, \
             "Total throughput counter wrapped");
         return;
     }
@@ -426,7 +425,7 @@ static void MeasurePerformance(TMessage message) {
     if (messagesReceived % shmem->TestParams.Burst == 0) {
 
         /* Extend the timeout every time a full burst is received */
-        TestRunner::ExtendTimeout();
+        TestCase::ExtendTimeout();
     }
 }
 

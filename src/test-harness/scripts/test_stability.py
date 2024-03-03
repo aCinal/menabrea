@@ -3,15 +3,18 @@
 import socket
 import json
 from typing import Any, Dict, List
+from sys import argv
 
 UDS_PATH = "/tmp/test_framework.sock"
-TEST_SUITE_PATH = "/opt/test_suite.json"
 
 def main() -> None:
     """Application entry point."""
+    if len(argv) < 2:
+        print(f"Usage: python {argv[0]} <path to test suite>")
+        return
+    suite = parse_test_suite_json(argv[1])
     sock = socket.socket(socket.AF_UNIX, socket.SOCK_SEQPACKET)
     sock.connect(UDS_PATH)
-    suite = parse_test_suite_json(TEST_SUITE_PATH)
 
     # Run the test suite forever
     while True:
@@ -44,4 +47,3 @@ def make_run_command(case: Dict[str, Any]) -> str:
 
 if __name__ == "__main__":
     main()
-

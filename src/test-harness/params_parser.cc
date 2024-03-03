@@ -1,6 +1,6 @@
 #define FORMAT_LOG(fmt)  "params_parser.cc: " fmt
-#include <framework/logging.hh>
-#include <framework/params_parser.hh>
+#include "logging.hh"
+#include <menabrea/test/params_parser.hh>
 #include <menabrea/exception.h>
 #include <string.h>
 #include <stdlib.h>

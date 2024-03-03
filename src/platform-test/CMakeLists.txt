@@ -10,22 +10,19 @@ add_compile_options(-fvisibility=hidden)
 add_compile_definitions(PRIVATE EM_64_BIT)
 add_compile_definitions(PRIVATE ENV_64_BIT)
 
-add_library(regression SHARED main.cc)
+add_library(platformtest SHARED main.cc)
 # Yocto requires versioned libraries
-set_target_properties(regression
+set_target_properties(platformtest
     PROPERTIES
     VERSION 1.0.0)
 
-include_directories("../platform/interface")
 include_directories(.)
 
 add_subdirectory(cases)
-add_subdirectory(framework)
 add_subdirectory(scripts)
 
-target_link_libraries(regression
+target_link_libraries(platformtest
     cases
-    framework
 )
 
-install (TARGETS regression RUNTIME)
+install(TARGETS platformtest RUNTIME)

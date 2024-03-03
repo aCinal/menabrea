@@ -1,6 +1,7 @@
 #define FORMAT_LOG(fmt)  "test_case.cc: " fmt
-#include <framework/logging.hh>
-#include <framework/test_case.hh>
+#include "logging.hh"
+#include "test_runner.hh"
+#include <menabrea/test/test_case.hh>
 #include <map>
 
 namespace TestCase {
@@ -40,6 +41,19 @@ Instance * Deregister(const char * name) {
     }
 
     return instance;
+}
+
+void ReportTestResult(Result result, const char * extra, ...) {
+
+    va_list args;
+    va_start(args, extra);
+    TestRunner::ReportTestResult(result, extra, args);
+    va_end(args);
+}
+
+void ExtendTimeout(u64 remainingTime) {
+
+    TestRunner::ExtendTimeout(remainingTime);
 }
 
 }

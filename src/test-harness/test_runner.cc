@@ -1,7 +1,7 @@
 #define FORMAT_LOG(fmt)                        "test_runner.cc: " fmt
-#include <framework/logging.hh>
-#include <framework/test_runner.hh>
-#include <framework/ipc_socket.hh>
+#include "logging.hh"
+#include "test_runner.hh"
+#include "ipc_socket.hh"
 #include <menabrea/workers.h>
 #include <menabrea/messaging.h>
 #include <menabrea/timing.h>
@@ -133,7 +133,7 @@ void OnPollHup(void) {
     }
 }
 
-void ReportTestResult(TestCase::Result result, const char * extra, ...) {
+void ReportTestResult(TestCase::Result result, const char * extra, va_list args) {
 
     AssertTrue(extra != nullptr);
 
@@ -154,10 +154,7 @@ void ReportTestResult(TestCase::Result result, const char * extra, ...) {
     payload->TestRunId = currentTestRun;
     payload->Result = result;
     payload->Core = GetCurrentCore();
-    va_list args;
-    va_start(args, extra);
     (void) vsnprintf(payload->Extra, sizeof(payload->Extra), extra, args);
-    va_end(args);
 
     /* Send the message to the listener */
     SendMessage(resultMessage, s_listenerId);
@@ -288,7 +285,7 @@ static void HandleCommandRun(const char * testCaseName, char * testArgsString) {
 
     AssertTrue(s_listenerId != WORKER_ID_INVALID);
     /* Arm the timer */
-    if (unlikely(timeoutTimer != ArmTimer(timeoutTimer, DEFAULT_TEST_TIMEOUT, 0, timeoutMessage, s_listenerId))) {
+    if (unlikely(timeoutTimer != ArmTimer(timeoutTimer, TestCase::DEFAULT_TEST_TIMEOUT, 0, timeoutMessage, s_listenerId))) {
 
         LOG_ERROR("%s(): Failed to arm the timeout timer for test case '%s'", \
             __FUNCTION__, testCaseName);

@@ -2,7 +2,7 @@
 #ifndef PLATFORM_TEST_CASES_BASIC_WORKERS_BASIC_WORKERS_HH
 #define PLATFORM_TEST_CASES_BASIC_WORKERS_BASIC_WORKERS_HH
 
-#include <framework/test_case.hh>
+#include <menabrea/test/test_case.hh>
 
 class TestBasicWorkers : public TestCase::Instance {
 public:

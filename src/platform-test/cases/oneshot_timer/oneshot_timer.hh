@@ -2,7 +2,7 @@
 #ifndef PLATFORM_TEST_CASES_ONESHOT_TIMER_ONESHOT_TIMER_HH
 #define PLATFORM_TEST_CASES_ONESHOT_TIMER_ONESHOT_TIMER_HH
 
-#include <framework/test_case.hh>
+#include <menabrea/test/test_case.hh>
 
 class TestOneshotTimer : public TestCase::Instance {
 public:

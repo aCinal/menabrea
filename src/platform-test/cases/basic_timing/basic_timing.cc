@@ -1,6 +1,5 @@
 #include "basic_timing.hh"
-#include <framework/test_runner.hh>
-#include <framework/params_parser.hh>
+#include <menabrea/test/params_parser.hh>
 #include <menabrea/workers.h>
 #include <menabrea/cores.h>
 #include <menabrea/messaging.h>
@@ -192,7 +191,7 @@ int TestBasicTiming::RunSubcase1(void) {
 
     DestroyTimer(timerId);
     /* Pass the test synchronously */
-    TestRunner::ReportTestResult(TestCase::Result::Success);
+    TestCase::ReportTestResult(TestCase::Result::Success);
     return 0;
 }
 
@@ -221,7 +220,7 @@ int TestBasicTiming::RunSubcase2(void) {
         LogPrint(ELogSeverityLevel_Error, "Timer ID 0x%x got immediately reused in test case '%s'", \
             timerId, this->GetName());
         /* Report failure and return 0 to indicate that the test has started successfully */
-        TestRunner::ReportTestResult(TestCase::Result::Failure, "Timer ID 0x%x got immediately reused", \
+        TestCase::ReportTestResult(TestCase::Result::Failure, "Timer ID 0x%x got immediately reused", \
             timerId);
         return 0;
     }
@@ -244,14 +243,14 @@ int TestBasicTiming::RunSubcase2(void) {
 
             LogPrint(ELogSeverityLevel_Info, "Timer ID 0x%x reused after %d allocations", \
                 timerId, i + 1);
-            TestRunner::ReportTestResult(TestCase::Result::Success, \
+            TestCase::ReportTestResult(TestCase::Result::Success, \
                 "Timer ID 0x%x reused after %d allocations", timerId, i + 1);
             return 0;
         }
     }
 
     /* Report failure and return 0 to indicate that the test has started successfully */
-    TestRunner::ReportTestResult(TestCase::Result::Failure, \
+    TestCase::ReportTestResult(TestCase::Result::Failure, \
         "Timer ID 0x%x never got reused", startTimerId);
     return 0;
 }
@@ -273,13 +272,13 @@ int TestBasicTiming::RunSubcase3(void) {
 
         LogPrint(ELogSeverityLevel_Error, "Unexpectedly succeeded at arming timer with ID out of range. ArmTimer returned %d", \
             ret);
-        TestRunner::ReportTestResult(TestCase::Result::Failure, \
+        TestCase::ReportTestResult(TestCase::Result::Failure, \
             "Unexpectedly succeeded at arming timer with ID out of range");
         return 0;
     }
 
     DestroyMessage(message);
-    TestRunner::ReportTestResult(TestCase::Result::Success);
+    TestCase::ReportTestResult(TestCase::Result::Success);
     return 0;
 }
 
@@ -300,13 +299,13 @@ int TestBasicTiming::RunSubcase4(void) {
         (void) DisarmTimer(timerId);
         LogPrint(ELogSeverityLevel_Error, "Unexpectedly succeeded at arming timer 0x%x with invalid message. ArmTimer returned %d", \
             timerId, ret);
-        TestRunner::ReportTestResult(TestCase::Result::Failure, \
+        TestCase::ReportTestResult(TestCase::Result::Failure, \
             "Unexpectedly succeeded at arming timer 0x%x with invalid message", timerId);
         return 0;
     }
 
     DestroyTimer(timerId);
-    TestRunner::ReportTestResult(TestCase::Result::Success);
+    TestCase::ReportTestResult(TestCase::Result::Success);
     return 0;
 }
 
@@ -319,12 +318,12 @@ int TestBasicTiming::RunSubcase5(void) {
 
         LogPrint(ELogSeverityLevel_Error, "Unexpectedly succeeded at disarming timer with ID out of range. DisarmTimer returned %d", \
             ret);
-        TestRunner::ReportTestResult(TestCase::Result::Failure, \
+        TestCase::ReportTestResult(TestCase::Result::Failure, \
             "Unexpectedly succeeded at disarming timer with ID out of range");
         return 0;
     }
 
-    TestRunner::ReportTestResult(TestCase::Result::Success);
+    TestCase::ReportTestResult(TestCase::Result::Success);
     return 0;
 }
 
@@ -334,7 +333,7 @@ int TestBasicTiming::RunSubcase6(void) {
      * survive this without a crash. */
     DestroyTimer(TIMER_ID_INVALID);
 
-    TestRunner::ReportTestResult(TestCase::Result::Success);
+    TestCase::ReportTestResult(TestCase::Result::Success);
     return 0;
 }
 
@@ -347,12 +346,12 @@ int TestBasicTiming::RunSubcase7(void) {
 
         LogPrint(ELogSeverityLevel_Error, "Unexpectedly succeeded at creating timer 0x%x with NULL for name", \
             timerId);
-        TestRunner::ReportTestResult(TestCase::Result::Failure, \
+        TestCase::ReportTestResult(TestCase::Result::Failure, \
             "Unexpectedly succeeded at creating timer 0x%x with NULL for name", timerId);
         return 0;
     }
 
-    TestRunner::ReportTestResult(TestCase::Result::Success);
+    TestCase::ReportTestResult(TestCase::Result::Success);
     return 0;
 }
 
@@ -369,7 +368,7 @@ static void ReceiverBody(TMessage message) {
     if (s_timerId != TIMER_ID_INVALID) {
 
         /* Running subcase 0 - timeout message received successfully */
-        TestRunner::ReportTestResult(TestCase::Result::Success);
+        TestCase::ReportTestResult(TestCase::Result::Success);
     }
 
     DestroyMessage(message);

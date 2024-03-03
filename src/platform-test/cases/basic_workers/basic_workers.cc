@@ -1,6 +1,5 @@
 #include "basic_workers.hh"
-#include <framework/test_runner.hh>
-#include <framework/params_parser.hh>
+#include <menabrea/test/params_parser.hh>
 #include <menabrea/workers.h>
 #include <menabrea/cores.h>
 #include <menabrea/messaging.h>
@@ -96,7 +95,7 @@ int TestBasicWorkers::RunSubcase0(void) {
     }
 
     TerminateWorker(workerId);
-    TestRunner::ReportTestResult(TestCase::Result::Success);
+    TestCase::ReportTestResult(TestCase::Result::Success);
     return 0;
 }
 
@@ -118,7 +117,7 @@ int TestBasicWorkers::RunSubcase1(void) {
     TerminateWorker(workerId);
     TerminateWorker(workerId);
 
-    TestRunner::ReportTestResult(TestCase::Result::Success);
+    TestCase::ReportTestResult(TestCase::Result::Success);
     return 0;
 }
 
@@ -148,13 +147,13 @@ int TestBasicWorkers::RunSubcase2(void) {
         LogPrint(ELogSeverityLevel_Error, \
             "Argument unexpectedly touched by the worker despite having called TerminateWorker and set to %d in test '%s'", \
             untouchable, this->GetName());
-        TestRunner::ReportTestResult(TestCase::Result::Failure, \
+        TestCase::ReportTestResult(TestCase::Result::Failure, \
             "Argument unexpectedly touched by the worker despite having called TerminateWorker and set to %d", \
             untouchable);
 
     } else {
 
-        TestRunner::ReportTestResult(TestCase::Result::Success);
+        TestCase::ReportTestResult(TestCase::Result::Success);
     }
 
     return 0;
@@ -201,14 +200,14 @@ int TestBasicWorkers::RunSubcase4(void) {
         TerminateWorker(workerId2);
         LogPrint(ELogSeverityLevel_Error, "Second deployment of worker 0x%x unexpectedly succeeded (DeployWorker returned 0x%x) in test '%s'", \
             DUMMY_WORKER_ID, workerId2, this->GetName());
-        TestRunner::ReportTestResult(TestCase::Result::Failure, \
+        TestCase::ReportTestResult(TestCase::Result::Failure, \
             "Second deployment of worker 0x%x unexpectedly succeeded", \
             DUMMY_WORKER_ID);
         return 0;
     }
 
     TerminateWorker(workerId1);
-    TestRunner::ReportTestResult(TestCase::Result::Success);
+    TestCase::ReportTestResult(TestCase::Result::Success);
     return 0;
 }
 
@@ -222,13 +221,13 @@ int TestBasicWorkers::RunSubcase5(void) {
         LogPrint(ELogSeverityLevel_Error, \
             "Unexpectedly succeeded at deploying a worker with static ID 0x%x in the dynamic range during test '%s'", \
             WORKER_ID_DYNAMIC_BASE, this->GetName());
-        TestRunner::ReportTestResult(TestCase::Result::Failure, \
+        TestCase::ReportTestResult(TestCase::Result::Failure, \
             "Unexpectedly succeeded at deploying a worker with static ID 0x%x", \
             DUMMY_WORKER_ID);
         return 0;
     }
 
-    TestRunner::ReportTestResult(TestCase::Result::Success);
+    TestCase::ReportTestResult(TestCase::Result::Success);
     return 0;
 }
 
@@ -242,13 +241,13 @@ int TestBasicWorkers::RunSubcase6(void) {
         LogPrint(ELogSeverityLevel_Error, \
             "Unexpectedly succeeded at deploying worker 0x%x with NULL pointer for config during test '%s'", \
             workerId, this->GetName());
-        TestRunner::ReportTestResult(TestCase::Result::Failure, \
+        TestCase::ReportTestResult(TestCase::Result::Failure, \
             "Unexpectedly succeeded at deploying worker 0x%x with NULL pointer for config", \
             workerId);
         return 0;
     }
 
-    TestRunner::ReportTestResult(TestCase::Result::Success);
+    TestCase::ReportTestResult(TestCase::Result::Success);
     return 0;
 }
 
@@ -266,13 +265,13 @@ int TestBasicWorkers::RunSubcase7(void) {
         LogPrint(ELogSeverityLevel_Error, \
             "Unexpectedly succeeded at deploying worker 0x%x with NULL pointer for name during test '%s'", \
             workerId, this->GetName());
-        TestRunner::ReportTestResult(TestCase::Result::Failure, \
+        TestCase::ReportTestResult(TestCase::Result::Failure, \
             "Unexpectedly succeeded at deploying worker 0x%x with NULL pointer for name", \
             workerId);
         return 0;
     }
 
-    TestRunner::ReportTestResult(TestCase::Result::Success);
+    TestCase::ReportTestResult(TestCase::Result::Success);
     return 0;
 }
 
@@ -290,13 +289,13 @@ int TestBasicWorkers::RunSubcase8(void) {
         LogPrint(ELogSeverityLevel_Error, \
             "Unexpectedly succeeded at deploying worker 0x%x with NULL pointer for worker body during test '%s'", \
             workerId, this->GetName());
-        TestRunner::ReportTestResult(TestCase::Result::Failure, \
+        TestCase::ReportTestResult(TestCase::Result::Failure, \
             "Unexpectedly succeeded at deploying worker 0x%x with NULL pointer for worker body", \
             workerId);
         return 0;
     }
 
-    TestRunner::ReportTestResult(TestCase::Result::Success);
+    TestCase::ReportTestResult(TestCase::Result::Success);
     return 0;
 }
 
@@ -316,13 +315,13 @@ int TestBasicWorkers::RunSubcase9(void) {
         LogPrint(ELogSeverityLevel_Error, \
             "Unexpectedly succeeded at deploying worker 0x%x despite user init failure during test '%s'", \
             workerId, this->GetName());
-        TestRunner::ReportTestResult(TestCase::Result::Failure, \
+        TestCase::ReportTestResult(TestCase::Result::Failure, \
             "Unexpectedly succeeded at deploying worker 0x%x despite user init failure", \
             workerId);
         return 0;
     }
 
-    TestRunner::ReportTestResult(TestCase::Result::Success);
+    TestCase::ReportTestResult(TestCase::Result::Success);
     return 0;
 }
 
@@ -344,14 +343,14 @@ int TestBasicWorkers::RunSubcase10(void) {
         LogPrint(ELogSeverityLevel_Error, \
             "Failed to look up worker '%s' based on name during test '%s'. Expected ID: 0x%x, FindLocalWorker returned: 0x%x", \
             workerName, this->GetName(), workerId, resolvedId);
-        TestRunner::ReportTestResult(TestCase::Result::Failure, \
+        TestCase::ReportTestResult(TestCase::Result::Failure, \
             "Failed to look up worker '%s' based on name. Expected ID: 0x%x, FindLocalWorker returned: 0x%x", \
             workerName, workerId, resolvedId);
         return 0;
     }
 
     TerminateWorker(workerId);
-    TestRunner::ReportTestResult(TestCase::Result::Success);
+    TestCase::ReportTestResult(TestCase::Result::Success);
     return 0;
 }
 
@@ -365,13 +364,13 @@ int TestBasicWorkers::RunSubcase11(void) {
         LogPrint(ELogSeverityLevel_Error, \
             "Unexpectedly succeeded at looking up platform-internal EO '%s' during test '%s'. FindLocalWorker returned: 0x%x", \
             platformEoName, this->GetName(), resolvedId);
-        TestRunner::ReportTestResult(TestCase::Result::Failure, \
+        TestCase::ReportTestResult(TestCase::Result::Failure, \
             "Unexpectedly succeeded at looking up platform-internal EO '%s'. FindLocalWorker returned: 0x%x", \
             platformEoName, resolvedId);
         return 0;
     }
 
-    TestRunner::ReportTestResult(TestCase::Result::Success);
+    TestCase::ReportTestResult(TestCase::Result::Success);
     return 0;
 }
 
@@ -398,7 +397,7 @@ static void Subcase3LocalInit(int core) {
 
 static void Subcase3GlobalExit(void) {
 
-    TestRunner::ReportTestResult(TestCase::Result::Success);
+    TestCase::ReportTestResult(TestCase::Result::Success);
 }
 
 static int Subcase9GlobalInit(void * arg) {

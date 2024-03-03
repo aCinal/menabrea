@@ -1,6 +1,6 @@
 
-#ifndef PLATFORM_TEST_FRAMEWORK_TEST_CASE_HH
-#define PLATFORM_TEST_FRAMEWORK_TEST_CASE_HH
+#ifndef TEST_HARNESS_INTERFACE_MENABREA_TEST_TEST_CASE_HH
+#define TEST_HARNESS_INTERFACE_MENABREA_TEST_TEST_CASE_HH
 
 #include <menabrea/common.h>
 #include <string>
@@ -32,6 +32,11 @@ Instance * GetInstanceByName(const char * name);
 int Register(Instance * instance);
 Instance * Deregister(const char * name);
 
+constexpr const u64 DEFAULT_TEST_TIMEOUT = 5 * 1000 * 1000;  /* 5 seconds */
+
+void ReportTestResult(Result result, const char * extra = " ", ...) __attribute__((format(printf, 2, 3)));
+void ExtendTimeout(u64 remainingTime = DEFAULT_TEST_TIMEOUT);
+
 }
 
-#endif /* PLATFORM_TEST_FRAMEWORK_TEST_CASE_HH */
+#endif /* TEST_HARNESS_INTERFACE_MENABREA_TEST_TEST_CASE_HH */

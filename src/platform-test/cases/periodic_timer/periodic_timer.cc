@@ -1,6 +1,5 @@
 #include "periodic_timer.hh"
-#include <framework/test_runner.hh>
-#include <framework/params_parser.hh>
+#include <menabrea/test/params_parser.hh>
 #include <menabrea/workers.h>
 #include <menabrea/messaging.h>
 #include <menabrea/timing.h>
@@ -149,7 +148,7 @@ static void ReceiverBody(TMessage message) {
 
         LogPrint(ELogSeverityLevel_Warning, "Worker 0x%x received unexpected message 0x%x from 0x%x. Failing the test...", \
             GetOwnWorkerId(), GetMessageId(message), GetMessageSender(message));
-        TestRunner::ReportTestResult(TestCase::Result::Failure, "Received unexpected message 0x%x from 0x%x", \
+        TestCase::ReportTestResult(TestCase::Result::Failure, "Received unexpected message 0x%x from 0x%x", \
             GetMessageId(message), GetMessageSender(message));
         DestroyMessage(message);
         return;
@@ -162,7 +161,7 @@ static void ReceiverBody(TMessage message) {
         u64 observedPeriod = std::chrono::duration_cast<std::chrono::microseconds>(currentTime - shmem->LastTimeout).count();
         if (observedPeriod > shmem->ExpectedPeriod + shmem->MaxError or observedPeriod < std::min(0UL, shmem->ExpectedPeriod - shmem->MaxError)) {
 
-            TestRunner::ReportTestResult(TestCase::Result::Failure, \
+            TestCase::ReportTestResult(TestCase::Result::Failure, \
                 "Observed period %ld significantly different from expected %ld (period number: %d, max error allowed: %ld)", \
                 observedPeriod, shmem->ExpectedPeriod, shmem->MessagesReceived, shmem->MaxError);
             LogPrint(ELogSeverityLevel_Error, \
@@ -176,7 +175,7 @@ static void ReceiverBody(TMessage message) {
 
     if (shmem->MessagesReceived == shmem->MaxMessages) {
 
-        TestRunner::ReportTestResult(TestCase::Result::Success);
+        TestCase::ReportTestResult(TestCase::Result::Success);
     }
 
     /* Save current time for the next timeout */

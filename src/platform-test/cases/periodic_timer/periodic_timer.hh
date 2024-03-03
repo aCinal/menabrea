@@ -2,7 +2,7 @@
 #ifndef PLATFORM_TEST_CASES_PERIODIC_TIMER_PERIODIC_TIMER_HH
 #define PLATFORM_TEST_CASES_PERIODIC_TIMER_PERIODIC_TIMER_HH
 
-#include <framework/test_case.hh>
+#include <menabrea/test/test_case.hh>
 
 class TestPeriodicTimer : public TestCase::Instance {
 public:

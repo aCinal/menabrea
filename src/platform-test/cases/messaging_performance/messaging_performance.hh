@@ -2,7 +2,7 @@
 #ifndef PLATFORM_TEST_CASES_MESSAGING_PERFORMANCE_MESSAGING_PERFORMANCE_HH
 #define PLATFORM_TEST_CASES_MESSAGING_PERFORMANCE_MESSAGING_PERFORMANCE_HH
 
-#include <framework/test_case.hh>
+#include <menabrea/test/test_case.hh>
 
 class TestMessagingPerformance : public TestCase::Instance {
 public:

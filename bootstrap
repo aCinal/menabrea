@@ -61,6 +61,10 @@ bitbake-layers add-layer ../layers/meta-menabrea-kernel &&
 echo "Adding platform layer..." &&
 bitbake-layers add-layer ../layers/meta-menabrea-platform &&
 
+# Add test harness layer
+echo "Adding test harness layer..." &&
+bitbake-layers add-layer ../layers/meta-menabrea-test-harness &&
+
 # Add application layer
 echo "Adding application layer..." &&
 bitbake-layers add-layer ../layers/meta-menabrea-app &&

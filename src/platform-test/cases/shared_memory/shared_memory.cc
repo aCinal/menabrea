@@ -1,5 +1,4 @@
 #include "shared_memory.hh"
-#include <framework/test_runner.hh>
 #include <menabrea/log.h>
 #include <menabrea/workers.h>
 #include <menabrea/cores.h>
@@ -86,7 +85,7 @@ static void WorkerLocalInit(int core) {
     int * localData = static_cast<int *>(GetRuntimeMemory(sizeof(int)));
     if (localData == nullptr) {
 
-        TestRunner::ReportTestResult(TestCase::Result::Failure, \
+        TestCase::ReportTestResult(TestCase::Result::Failure, \
             "Failed to allocate local data on core %d", core);
         return;
     }
@@ -96,14 +95,14 @@ static void WorkerLocalInit(int core) {
     char * sharedData = static_cast<char *>(GetSharedData());
     if (sharedData == nullptr) {
 
-        TestRunner::ReportTestResult(TestCase::Result::Failure, \
+        TestCase::ReportTestResult(TestCase::Result::Failure, \
             "Shared data not available on core %d", core);
         return;
     }
 
     if (0 != strcmp(sharedData, TEST_MEMORY_CONTENT)) {
 
-        TestRunner::ReportTestResult(TestCase::Result::Failure, \
+        TestCase::ReportTestResult(TestCase::Result::Failure, \
             "Unexpected shared data content on core %d: %s", core, sharedData);
     }
 }
@@ -114,14 +113,14 @@ static void WorkerLocalExit(int core) {
     int * localData = static_cast<int *>(GetLocalData());
     if (localData == nullptr) {
 
-        TestRunner::ReportTestResult(TestCase::Result::Failure, \
+        TestCase::ReportTestResult(TestCase::Result::Failure, \
             "Local data not available on core %d", core);
         return;
     }
 
     if (*localData != core) {
 
-        TestRunner::ReportTestResult(TestCase::Result::Failure, \
+        TestCase::ReportTestResult(TestCase::Result::Failure, \
             "Invalid content of local data (%d) on core %d", \
             *localData, core);
     }
@@ -135,13 +134,13 @@ static void WorkerExit(void) {
     void * sharedData = GetSharedData();
     if (sharedData == nullptr) {
 
-        TestRunner::ReportTestResult(TestCase::Result::Failure, \
+        TestCase::ReportTestResult(TestCase::Result::Failure, \
             "Shared data null in the exit function");
         return;
     }
 
     PutRuntimeMemory(sharedData);
-    TestRunner::ReportTestResult(TestCase::Result::Success);
+    TestCase::ReportTestResult(TestCase::Result::Success);
 }
 
 static void WorkerBody(TMessage message) {

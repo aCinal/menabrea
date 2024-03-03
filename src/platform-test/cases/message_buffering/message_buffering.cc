@@ -1,6 +1,5 @@
 #include "message_buffering.hh"
-#include <framework/test_runner.hh>
-#include <framework/params_parser.hh>
+#include <menabrea/test/params_parser.hh>
 #include <menabrea/log.h>
 #include <menabrea/cores.h>
 #include <menabrea/messaging.h>
@@ -82,7 +81,7 @@ static void WorkerBody(TMessage message) {
         if (s_messagesReceived == INTERNAL_BUFFER_SIZE) {
 
             /* Report success to the test framework */
-            TestRunner::ReportTestResult(TestCase::Result::Success);
+            TestCase::ReportTestResult(TestCase::Result::Success);
             /* Note that the worker is deployed only on the shared core so we do
              * not risk a race condition where the StopTest callback tries to
              * terminate us again by reading obsolete s_workerId */

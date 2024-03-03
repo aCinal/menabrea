@@ -2,7 +2,7 @@
 #ifndef PLATFORM_TEST_CASES_SHARED_MEMORY_SHARED_MEMORY_HH
 #define PLATFORM_TEST_CASES_SHARED_MEMORY_SHARED_MEMORY_HH
 
-#include <framework/test_case.hh>
+#include <menabrea/test/test_case.hh>
 
 class TestSharedMemory : public TestCase::Instance {
 public:

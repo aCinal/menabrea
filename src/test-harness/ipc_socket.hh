@@ -1,6 +1,6 @@
 
-#ifndef PLATFORM_TEST_FRAMEWORK_IPC_SOCKET_HH
-#define PLATFORM_TEST_FRAMEWORK_IPC_SOCKET_HH
+#ifndef TEST_HARNESS_IPC_SOCKET_HH
+#define TEST_HARNESS_IPC_SOCKET_HH
 
 namespace IpcSocket {
 
@@ -10,4 +10,4 @@ void WriteBack(const char * fmt, ...) __attribute__((format(printf, 1, 2)));
 
 }
 
-#endif /* PLATFORM_TEST_FRAMEWORK_IPC_SOCKET_HH */
+#endif /* TEST_HARNESS_IPC_SOCKET_HH */

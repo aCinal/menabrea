@@ -1,8 +1,3 @@
-#include <menabrea/common.h>
-#include <framework/ipc_socket.hh>
-#include <framework/test_runner.hh>
-#include <framework/test_case.hh>
-
 #include <cases/basic_timing/basic_timing.hh>
 #include <cases/basic_workers/basic_workers.hh>
 #include <cases/message_buffering/message_buffering.hh>
@@ -13,9 +8,6 @@
 #include <cases/shared_memory/shared_memory.hh>
 
 APPLICATION_GLOBAL_INIT() {
-
-    TestRunner::Init();
-    IpcSocket::Init();
 
     TestCase::Register(new TestBasicTiming("TestBasicTiming"));
     TestCase::Register(new TestBasicWorkers("TestBasicWorkers"));
@@ -40,9 +32,6 @@ APPLICATION_LOCAL_EXIT(core) {
 }
 
 APPLICATION_GLOBAL_EXIT() {
-
-    IpcSocket::Teardown();
-    TestRunner::Teardown();
 
     delete TestCase::Deregister("TestBasicTiming");
     delete TestCase::Deregister("TestBasicWorkers");

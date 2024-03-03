@@ -1,7 +1,7 @@
 #define FORMAT_LOG(fmt)  "ipc_socket.cc: " fmt
-#include <framework/logging.hh>
-#include <framework/ipc_socket.hh>
-#include <framework/test_runner.hh>
+#include "logging.hh"
+#include "ipc_socket.hh"
+#include "test_runner.hh"
 #include <menabrea/exception.h>
 #include <menabrea/input.h>
 #include <menabrea/cores.h>

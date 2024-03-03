@@ -104,3 +104,73 @@ Applications should define these symbols using the following macros found in `me
 - `APPLICATION_GLOBAL_EXIT()`
 
 Applications to be loaded are selected via the `platform_config.json` files. The startup script (`menabrea_start.py`) parses the JSON file and sets the environment variable `MENABREA_APP_LIST` appropriately.
+
+---
+
+### Test harness
+
+A unified test harness is provided by the `meta-menabrea-test-harness` layer for use by applications. To create a test case, the application should first subclass `TestCase::Instance`:
+
+```c++
+#include <menabrea/test/test_case.hh>
+#include <menabrea/test/params_parser.hh>
+
+class TestExample : public TestCase::Instance {
+    struct ExampleParams {
+        u32 Example;
+    };
+
+    ...
+public:
+    TestExample(const char * name) : TestCase::Instance(name) {
+        ...
+    }
+
+    virtual u32 GetParamsSize(void) override {
+        // Tell the harness how much memory is needed for the test parameters
+        return sizeof(ExampleParams);
+    }
+
+    virtual int ParseParams(char * paramsIn, void * paramsOut) override {
+        // Describe the parameters structure
+        ParamsParser::StructLayout paramsLayout;
+        paramsLayout["example"] = ParamsParser::StructField(offsetof(ExampleParams, Example), sizeof(u32), ParamsParser::FieldType::U32);
+        // Parse the test command line
+        return ParamsParser::Parse(paramsIn, paramsOut, std::move(paramsLayout));
+    }
+
+    virtual int StartTest(void * args) override {
+        ExampleParams * params = static_cast<ExampleParams *>(args);
+        // The test result is reported asynchronously
+        TestCase::ReportTestResult(TestCase::Result::Success, "Parsed DummyParam=%d", params->DummyParam);
+        // Indicate that the test was successfully started (result can be reported asynchronously later)
+        return 0;
+    }
+
+    virtual void StopTest(void) override {
+        // Do cleanup on test completion and/or timeout
+        ...
+    }
+};
+```
+
+The test case can then be registered by calling `TestCase::Register` during global initializion:
+
+```c++
+#include <menabrea/test/test_case.hh>
+
+...
+
+APPLICATION_GLOBAL_INIT() {
+    TestCase::Register(new TestExample("TestExample"));
+}
+
+...
+
+APPLICATION_GLOBAL_EXIT() {
+    delete TestCase::Deregister("TestExample");
+}
+
+```
+
+The above APIs are exposed by `libtestharness.so` which must be loaded (i.e., specified in `MENABREA_APP_LIST`) before its users.
