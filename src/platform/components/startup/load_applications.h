@@ -7,19 +7,27 @@
 #define MAX_APP_LIB_NAME_LEN        PATH_MAX
 #define MAX_APP_LIB_NUM             8
 #define APP_LIB_LIST_ENV            "MENABREA_APP_LIST"
+#define MAX_DEP_NAME_LEN            PATH_MAX
+
+typedef struct SAppDependency {
+    void * Handle;
+    struct SAppDependency * Next;
+    char Name[MAX_DEP_NAME_LEN];
+} SAppDependency;
 
 typedef struct SAppLib {
-    char Name[MAX_APP_LIB_NAME_LEN];
     void * Handle;
     void (* GlobalInit)(void);
     void (* LocalInit)(int core);
     void (* LocalExit)(int core);
     void (* GlobalExit)(void);
+    SAppDependency * Dependencies;
+    char Name[MAX_APP_LIB_NAME_LEN];
 } SAppLib;
 
 typedef struct SAppLibsSet {
-    int Count;
     SAppLib Libs[MAX_APP_LIB_NUM];
+    int Count;
 } SAppLibsSet;
 
 SAppLibsSet * LoadApplicationLibraries(void);

@@ -32,6 +32,3 @@ add_subdirectory(scripts)
 
 install(TARGETS testharness RUNTIME)
 install(DIRECTORY interface/ DESTINATION include)
-
-# Export global symbols for use by dynamically linked libraries
-# set_property(TARGET menabrea PROPERTY ENABLE_EXPORTS ON)
