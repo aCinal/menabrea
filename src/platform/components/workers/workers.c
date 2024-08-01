@@ -176,6 +176,7 @@ void TerminateWorker(TWorkerId workerId) {
 
     LogPrint(ELogSeverityLevel_Info, "Terminating worker 0x%x...", realId);
 
+    char workerName[MAX_WORKER_NAME_LEN];
     LockWorkerTableEntry(realId);
     SWorkerContext * context = FetchWorkerContext(realId);
 
@@ -221,12 +222,14 @@ void TerminateWorker(TWorkerId workerId) {
 
         /* Worker in invalid state */
 
+        /* Copy the name before releasing the lock */
+        (void) strcpy(workerName, context->Name);
         UnlockWorkerTableEntry(realId);
 
         /* Always issue a warning since this is always a failure in application design to
          * call TerminateWorker twice (or a bug if called for a bad worker ID altogether) */
-        LogPrint(ELogSeverityLevel_Warning, "%s(): Worker 0x%x in invalid state: %d", \
-            __FUNCTION__, realId, state);
+        LogPrint(ELogSeverityLevel_Warning, "%s(): Worker 0x%x ('%s') in invalid state: %d", \
+            __FUNCTION__, realId, workerName, state);
 
         if (WORKER_ID_INVALID == workerId) {
 
@@ -245,8 +248,8 @@ void TerminateWorker(TWorkerId workerId) {
                  * is an error. So as to honour the promise that TerminateWorker(WORKER_ID_INVALID)
                  * never returns to user code, our hand is forced to raise a hard exception here. */
                 RaiseException(EExceptionFatality_Fatal, \
-                    "Tried terminating self (0x%x) in user exit code (current EO callback: %d)", \
-                    realId, s_currentEoCallback);
+                    "Tried terminating self (0x%x, '%s') in user exit code (current EO callback: %d)", \
+                    realId, workerName, s_currentEoCallback);
             }
         }
         break;
@@ -387,16 +390,16 @@ static em_status_t WorkerEoStart(void * eoCtx, em_eo_t eo, const em_eo_conf_t * 
             if (userStatus) {
 
                 LogPrint(ELogSeverityLevel_Warning, \
-                    "User's global initialization function for worker '%s' failed (return value: %d)", \
-                    context->Name, userStatus);
+                    "User's global initialization function for worker 0x%x ('%s') failed (return value: %d)", \
+                    context->WorkerId, context->Name, userStatus);
                 /* Return error, resources will be cleaned up in the 'DeployWorker' function */
                 return EM_ERROR;
             }
 
         } else {
 
-            LogPrint(ELogSeverityLevel_Debug, "Worker 0x%x jumped back to %s", \
-                context->WorkerId, __FUNCTION__);
+            LogPrint(ELogSeverityLevel_Debug, "Worker 0x%x ('%s') jumped back to %s", \
+                context->WorkerId, context->Name, __FUNCTION__);
         }
     }
 
@@ -428,8 +431,8 @@ static em_status_t WorkerEoLocalStart(void * eoCtx, em_eo_t eo) {
 
         } else {
 
-            LogPrint(ELogSeverityLevel_Debug, "Worker 0x%x jumped back to %s", \
-                context->WorkerId, __FUNCTION__);
+            LogPrint(ELogSeverityLevel_Debug, "Worker 0x%x ('%s') jumped back to %s", \
+                context->WorkerId, context->Name, __FUNCTION__);
         }
     }
 
@@ -503,7 +506,7 @@ static void WorkerEoReceive(void * eoCtx, em_event_t event, em_event_type_t type
 
     } else {
 
-        LogPrint(ELogSeverityLevel_Debug, "Worker 0x%x jumped back to %s", \
-            context->WorkerId, __FUNCTION__);
+        LogPrint(ELogSeverityLevel_Debug, "Worker 0x%x ('%s') jumped back to %s", \
+            context->WorkerId, context->Name, __FUNCTION__);
     }
 }

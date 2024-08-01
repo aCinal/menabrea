@@ -87,12 +87,13 @@ TTimerId ArmTimer(TTimerId timerId, u64 expires, u64 period, TMessage message, T
 
     /* We have a valid timer, only now does it make sense to make introductions */
     char timerName[MAX_TIMER_NAME_LEN];
-    (void) strcpy(timerName, context->Name);
 
     /* Create a timeout event - to be received by the timing daemon */
     em_event_t timeoutEvent = em_alloc(sizeof(TTimerId), EM_EVENT_TYPE_SW, EM_POOL_DEFAULT);
     if (unlikely(timeoutEvent == EM_EVENT_UNDEF)) {
 
+        /* Copy the name before releasing the lock */
+        (void) strcpy(timerName, context->Name);
         UnlockTimerTableEntry(timerId);
         LogPrint(ELogSeverityLevel_Error, "%s(): Failed to allocate timeout event for timer '%s' (timer ID: 0x%x, message ID: 0x%x, receiver: 0x%x)", \
             __FUNCTION__, timerName, timerId, GetMessageId(message), receiver);
@@ -113,6 +114,8 @@ TTimerId ArmTimer(TTimerId timerId, u64 expires, u64 period, TMessage message, T
 
     if (unlikely(status != EM_OK)) {
 
+        /* Copy the name before releasing the lock */
+        (void) strcpy(timerName, context->Name);
         UnlockTimerTableEntry(timerId);
         em_free(timeoutEvent);
         LogPrint(ELogSeverityLevel_Error, "%s(): Failed to arm timer '%s' (timer ID: 0x%x, message ID: 0x%x, receiver: 0x%x)", \
@@ -170,9 +173,6 @@ void RetireTimer(TTimerId timerId) {
         /* Disarm the timer, but transition straight to state retired, and ignore setting
          * the SkipEvents counter if event is already in flight */
         status = em_tmo_cancel(tmo, &currentEvent);
-        /* We cancelled as quickly as we could, now it's time to copy the name for debug purposes
-         * should something go wrong */
-        (void) strcpy(timerName, context->Name);
         switch (status) {
         case EM_OK:
             /* Timeout cancelled cleanly - timeout event will not be sent */
@@ -204,6 +204,8 @@ void RetireTimer(TTimerId timerId) {
             FinalizeTimerDestruction(context);
             /* Transition to the terminal state */
             context->State = ETimerState_Retired;
+            /* Copy the name before releasing the lock for debug purposes */
+            (void) strcpy(timerName, context->Name);
             UnlockTimerTableEntry(timerId);
 
             LogPrint(ELogSeverityLevel_Debug, "%s(): Retired timer '%s' (0x%x), but an event has been sent already", \
@@ -213,6 +215,8 @@ void RetireTimer(TTimerId timerId) {
         default:
             /* Timer framework error */
 
+            /* Copy the name before releasing the lock */
+            (void) strcpy(timerName, context->Name);
             UnlockTimerTableEntry(timerId);
             RaiseException(EExceptionFatality_Fatal, \
                 "em_tmo_cancel() returned %d for timer '%s' (0x%x)", \
@@ -255,7 +259,6 @@ TTimerId DisarmTimer(TTimerId timerId) {
     STimerContext * context = FetchTimerContext(timerId);
 
     char timerName[MAX_TIMER_NAME_LEN];
-    (void) strcpy(timerName, context->Name);
     em_tmo_t tmo = context->Tmo;
     ETimerState state = context->State;
     em_event_t currentEvent = EM_EVENT_UNDEF;
@@ -293,6 +296,9 @@ TTimerId DisarmTimer(TTimerId timerId) {
 
             /* Transition to idle state */
             ChangeStateFromArmedToIdle(context);
+
+            /* Copy the name before releasing the lock */
+            (void) strcpy(timerName, context->Name);
             UnlockTimerTableEntry(timerId);
 
             LogPrint(ELogSeverityLevel_Debug, \
@@ -303,6 +309,8 @@ TTimerId DisarmTimer(TTimerId timerId) {
         default:
             /* Timer framework error */
 
+            /* Copy the name before releasing the lock */
+            (void) strcpy(timerName, context->Name);
             UnlockTimerTableEntry(timerId);
             RaiseException(EExceptionFatality_Fatal, \
                 "em_tmo_cancel() returned %d for timer '%s' (0x%x)", \
@@ -374,13 +382,14 @@ void DestroyTimer(TTimerId timerId) {
 
     /* We have a valid timer, only now does it make sense to make introductions */
     char timerName[MAX_TIMER_NAME_LEN];
-    (void) strcpy(timerName, context->Name);
 
     if (context->SkipEvents > 0) {
 
         /* Timer events already pushed to the daemon queue but not yet handled - do not release the context
          * yet but let the timing daemon do it instead */
         context->State = ETimerState_Destroyed;
+        /* Copy the name before releasing the lock */
+        (void) strcpy(timerName, context->Name);
         UnlockTimerTableEntry(timerId);
         LogPrint(ELogSeverityLevel_Debug, \
             "%s(): Destruction of timer '%s' (0x%x) delayed until the timing daemon receives all timeout events", \
@@ -388,6 +397,8 @@ void DestroyTimer(TTimerId timerId) {
 
     } else {
 
+        /* Copy the name before destroying the timer */
+        (void) strcpy(timerName, context->Name);
         /* All timeout events handled - timer can be safely destroyed */
         FinalizeTimerDestruction(context);
         UnlockTimerTableEntry(timerId);

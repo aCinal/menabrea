@@ -147,7 +147,7 @@ static int __init dummy_create_userspace_device_file(void) {
 
     /* Reach out to the udev (userspace /dev) daemon via a Netlink socket
      * for it to create a device node in /dev directory */
-    dummy_class = class_create(THIS_MODULE, "dummy/ringbuffer");
+    dummy_class = class_create("dummy/ringbuffer");
     if (IS_ERR(dummy_class)) {
 
         return PTR_ERR(dummy_class);

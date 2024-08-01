@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-YOCTO_BRANCH=mickledore
+YOCTO_BRANCH=scarthgap
 
 # Fetch the reference Yocto distribution
 POKY_DIR=layers/poky
