@@ -1,6 +1,6 @@
 #define FORMAT_LOG(fmt)  "test_case.cc: " fmt
-#include "logging.hh"
-#include "test_runner.hh"
+#include <logging.hh>
+#include <test_runner.hh>
 #include <menabrea/test/test_case.hh>
 #include <map>
 
@@ -22,7 +22,7 @@ int Register(Instance * instance) {
 
     } else {
 
-        LogPrint(ELogSeverityLevel_Warning, "Cannot register test case '%s'. Name already in use", \
+        LOG_WARNING("Cannot register test case '%s'. Name already in use", \
             instance->GetName());
         return -1;
     }
@@ -37,7 +37,7 @@ Instance * Deregister(const char * name) {
 
     } else {
 
-        LogPrint(ELogSeverityLevel_Warning, "Cannot deregister test case '%s'. Test case not registered", name);
+        LOG_WARNING("Cannot deregister test case '%s'. Test case not registered", name);
     }
 
     return instance;

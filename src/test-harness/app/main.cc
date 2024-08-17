@@ -1,7 +1,6 @@
 #include <menabrea/common.h>
-#include "ipc_socket.hh"
-#include "test_runner.hh"
-#include <menabrea/test/test_case.hh>
+#include <ipc_socket.hh>
+#include <test_runner.hh>
 
 APPLICATION_GLOBAL_INIT() {
 

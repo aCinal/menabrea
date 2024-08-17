@@ -177,10 +177,7 @@ static void UnloadDependencies(SAppDependency * depList) {
 static int LoadLibrary(const char * name, SAppLib * handle) {
 
     char * error;
-    /* Allow application libraries to export symbols to each other, but prefer local symbols
-     * over already defined global ones */
-    /* TODO: Use RTLD_GLOBAL for dependencies, but not for applications themselves (will require changes in libtestframework) */
-    void * libHandle = dlopen(name, RTLD_NOW | RTLD_GLOBAL | RTLD_DEEPBIND);
+    void * libHandle = dlopen(name, RTLD_NOW | RTLD_DEEPBIND);
     if (libHandle == NULL) {
 
         LogPrint(ELogSeverityLevel_Error, "Failed to open library '%s': %s", name, dlerror());
