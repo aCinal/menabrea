@@ -160,6 +160,9 @@ TWorkerId DeployWorker(const SWorkerConfig * config) {
      * sent from now on and when the last local init completes, the platform daemon
      * shall flush this buffer. */
 
+    LogPrint(ELogSeverityLevel_Debug, "Worker '%s' deploying with ID 0x%x...", \
+        config->Name, context->WorkerId);
+
     return context->WorkerId;
 }
 

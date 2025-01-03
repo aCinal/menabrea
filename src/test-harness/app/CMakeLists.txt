@@ -8,4 +8,6 @@ set_target_properties(testport
     PROPERTIES
     VERSION 1.0.0)
 
+target_compile_options(testport PRIVATE -fvisibility=hidden)
+
 install(TARGETS testport RUNTIME)

@@ -11,7 +11,15 @@ LIC_FILES_CHKSUM = "file://${COMMON_LICENSE_DIR}/MIT;md5=0835ade698e0bcf8506ecda
 # TODO: Move application test code to a separate layer
 DEPENDS = " \
     menabrea-platform \
+    menabrea-drivers-libs \
     menabrea-test-harness \
+    libsodium \
+    "
+
+RDEPENDS:${PN} = " \
+    menabrea-drivers-libs \
+    menabrea-test-harness \
+    libsodium \
     "
 
 inherit cmake

@@ -6,6 +6,7 @@ layers/*
 !layers/meta-em-odp
 !layers/meta-menabrea
 !layers/meta-menabrea-app
+!layers/meta-menabrea-drivers
 !layers/meta-menabrea-kernel
 !layers/meta-menabrea-platform
 !layers/meta-menabrea-platform-test

@@ -86,7 +86,7 @@
     "environment": {
         "ODP_CONFIG_FILE": "/opt/odp-menabrea.conf",
         "EM_CONFIG_FILE": null,
-        "MENABREA_APP_LIST": "libtestharness.so.1.0.0:libplatformtest.so.1.0.0",
+        "MENABREA_APP_LIST": "libecho.so.1.0.0",
         "LOG_VERBOSE": 1
     }
 }

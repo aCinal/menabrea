@@ -177,8 +177,8 @@ static void SigbusHandler(siginfo_t * siginfo, ucontext_t * ucontext) {
         break;
     }
 
-    LogPrint(ELogSeverityLevel_Error, "%s(): Memory bus error (%s) at %p (%s) (offending address: %p)", \
-        __FUNCTION__, reason, (const void *) ucontext->uc_mcontext.pc, instruction, siginfo->si_addr);
+    LogPrint(ELogSeverityLevel_Error, "%s(): Memory bus error (%d: %s) at %p (%s) (offending address: %p)", \
+        __FUNCTION__, siginfo->si_code, reason, (const void *) ucontext->uc_mcontext.pc, instruction, siginfo->si_addr);
     PrintProcessInfo();
     PrintCallstack();
 }
@@ -227,8 +227,8 @@ static void SigfpeHandler(siginfo_t * siginfo, ucontext_t * ucontext) {
         break;
     }
 
-    LogPrint(ELogSeverityLevel_Error, "%s(): Floating-point exception (%s) at %p (%s) (offending address: %p)", \
-        __FUNCTION__, reason, (const void *) ucontext->uc_mcontext.pc, instruction, siginfo->si_addr);
+    LogPrint(ELogSeverityLevel_Error, "%s(): Floating-point exception (%d: %s) at %p (%s) (offending address: %p)", \
+        __FUNCTION__, siginfo->si_code, reason, (const void *) ucontext->uc_mcontext.pc, instruction, siginfo->si_addr);
     PrintProcessInfo();
     PrintCallstack();
 }
@@ -277,8 +277,8 @@ static void SigillHandler(siginfo_t * siginfo, ucontext_t * ucontext) {
         break;
     }
 
-    LogPrint(ELogSeverityLevel_Error, "%s(): Illegal instruction error (%s) at %p (%s) (offending address: %p)", \
-        __FUNCTION__, reason, (const void *) ucontext->uc_mcontext.pc, instruction, siginfo->si_addr);
+    LogPrint(ELogSeverityLevel_Error, "%s(): Illegal instruction error (%d: %s) at %p (%s) (offending address: %p)", \
+        __FUNCTION__, siginfo->si_code, reason, (const void *) ucontext->uc_mcontext.pc, instruction, siginfo->si_addr);
     PrintProcessInfo();
     PrintCallstack();
 }
@@ -287,24 +287,24 @@ static void SigsegvHandler(siginfo_t * siginfo, ucontext_t * ucontext) {
 
     char instruction[OFFENDING_INSTRUCTION_BUFFER_SIZE];
     GetOffendingInstruction(ucontext, instruction, sizeof(instruction));
+    const char * reason;
 
     switch (siginfo->si_code) {
     case SEGV_MAPERR:
-        LogPrint(ELogSeverityLevel_Error, "%s(): Segmentation violation (address not mapped to object) at %p (%s) (offending address: %p)", \
-            __FUNCTION__, (const void *) ucontext->uc_mcontext.pc, instruction, siginfo->si_addr);
+        reason = "address not mapped to object";
         break;
 
     case SEGV_ACCERR:
-        LogPrint(ELogSeverityLevel_Error, "%s(): Segmentation violation (invalid permissions) at %p (%s) (offending address: %p)", \
-            __FUNCTION__, (const void *) ucontext->uc_mcontext.pc, instruction, siginfo->si_addr);
+        reason = "invalid permissions";
         break;
 
     default: /* Do not expect SEGV_BNDERR or SEGV_PKUERR */
-        LogPrint(ELogSeverityLevel_Error, "%s(): Segmentation violation (si_code=%d) at %p (%s) (offending address: %p)", \
-            __FUNCTION__, siginfo->si_code, (const void *) ucontext->uc_mcontext.pc, instruction, siginfo->si_addr);
+        reason = "???";
         break;
     }
 
+    LogPrint(ELogSeverityLevel_Error, "%s(): Segmentation violation (%d: %s) at %p (%s) (offending address: %p)", \
+        __FUNCTION__, siginfo->si_code, reason, (const void *) ucontext->uc_mcontext.pc, instruction, siginfo->si_addr);
     PrintProcessInfo();
     PrintCallstack();
 }

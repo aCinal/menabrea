@@ -13,6 +13,10 @@ DEPENDS = " \
     menabrea-test-harness \
     "
 
+RDEPENDS:${PN} = " \
+    python3 \
+    "
+
 inherit cmake
 
 FILES:${PN} += "/opt"

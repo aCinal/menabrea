@@ -9,6 +9,6 @@ add_compile_definitions(PRIVATE ENV_64_BIT)
 # Reduce shared objects sizes by only exporting the init/exit APIs
 add_compile_options(-fvisibility=hidden)
 
-add_subdirectory(internode_test)
+add_subdirectory(pipeline)
 add_subdirectory(echo)
 add_subdirectory(dummy_test)

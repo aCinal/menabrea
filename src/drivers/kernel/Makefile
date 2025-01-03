@@ -1,5 +1,4 @@
-obj-m := pangloss-driver.o
-obj-m += dummy-ringbuffer.o
+obj-m := mring.o
 
 SRC := $(shell pwd)
 

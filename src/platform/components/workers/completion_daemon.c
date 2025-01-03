@@ -133,6 +133,10 @@ static inline void CompleteWorkerDeployment(TWorkerId workerId) {
      * at platform level. */
     AssertTrue(em_eo_get_state(eo) == EM_EO_STATE_RUNNING);
 
+    /* Copy the name to our stack for logging purposes before releasing the lock */
+    char workerName[MAX_WORKER_NAME_LEN];
+    (void) strcpy(workerName, context->Name);
+
     if (!context->TerminationRequested) {
 
         /* EO now running and its queues have been enabled,
@@ -145,8 +149,8 @@ static inline void CompleteWorkerDeployment(TWorkerId workerId) {
         UnlockWorkerTableEntry(workerId);
 
         /* Deployment successful */
-        LogPrint(ELogSeverityLevel_Info, "Successfully deployed worker 0x%x (eo: %" PRI_EO ", queue: %" PRI_QUEUE ")", \
-            workerId, eo, queue);
+        LogPrint(ELogSeverityLevel_Info, "Deployed '%s' (id:%x,eo:%" PRI_EO ",q:%" PRI_QUEUE ")", \
+            workerName, workerId, eo, queue);
 
         /* Log any message drops - note that an EM log should also be present for each failed em_send() call */
         if (unlikely(messagesDropped)) {
@@ -175,7 +179,7 @@ static inline void CompleteWorkerDeployment(TWorkerId workerId) {
         UnlockWorkerTableEntry(workerId);
 
         /* Worker deployed and immediately terminated */
-        LogPrint(ELogSeverityLevel_Info, "Worker 0x%x's termination requested while still deploying and now in progress. Dropped %d message(s)", \
-            workerId, messagesDropped);
+        LogPrint(ELogSeverityLevel_Info, "Termination of worker '%s' (0x%x) requested during deployment and now in progress. Dropped %d message(s)", \
+            workerName, workerId, messagesDropped);
     }
 }

@@ -54,8 +54,12 @@ echo "Adding core image layer..." &&
 bitbake-layers add-layer ../layers/meta-menabrea &&
 
 # Add kernel customization layer
-echo "Adding kernel customization and device drivers layer..." &&
+echo "Adding kernel customization layer..." &&
 bitbake-layers add-layer ../layers/meta-menabrea-kernel &&
+
+# Add device driver layers
+echo "Adding device driver layer..." &&
+bitbake-layers add-layer ../layers/meta-menabrea-drivers &&
 
 # Add platform layer
 echo "Adding platform layer..." &&

@@ -7,11 +7,10 @@ LICENSE = "MIT"
 
 IMAGE_INSTALL:append              = " menabrea-app"
 IMAGE_INSTALL:append              = " menabrea-drivers"
+IMAGE_INSTALL:append              = " menabrea-drivers-libs"
 IMAGE_INSTALL:append              = " menabrea-platform"
 IMAGE_INSTALL:append              = " menabrea-platform-test"
 IMAGE_INSTALL:append              = " menabrea-test-harness"
-IMAGE_INSTALL:append              = " em-odp"
-IMAGE_INSTALL:append              = " python3"
 IMAGE_INSTALL:append:menabrea-dev = " tcpdump"
 IMAGE_INSTALL:append:menabrea-dev = " ethtool"
 

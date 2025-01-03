@@ -14,6 +14,13 @@ LIC_FILES_CHKSUM = "file://${COMMON_LICENSE_DIR}/MIT;md5=0835ade698e0bcf8506ecda
 
 DEPENDS = " \
     em-odp \
+    menabrea-drivers-libs \
+    "
+
+RDEPENDS:${PN} = " \
+    python3 \
+    em-odp \
+    menabrea-drivers-libs \
     "
 
 inherit cmake systemd
@@ -31,7 +38,7 @@ SYSTEMD_SERVICE:${PN} = "${@bb.utils.contains('MENABREA_AUTOSTART', '1', 'menabr
 do_install:append() {
 
     install -d ${D}/opt
-    install -m 0755 ${WORKDIR}/${PLATFORM_CONFIG_PATH} ${D}/opt
+    install -m 0644 ${WORKDIR}/${PLATFORM_CONFIG_PATH} ${D}/opt
 
     install -d ${D}${systemd_unitdir}/system
     install -m 0644 ${WORKDIR}/menabrea.service ${D}/${systemd_unitdir}/system
