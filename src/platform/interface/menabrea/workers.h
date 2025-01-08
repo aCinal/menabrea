@@ -22,7 +22,9 @@ typedef em_event_t TMessage;                                                   /
 #define WORKER_NODE_ID_BITS       4                                            /**< Bitlength of the node part of the worker ID */
 #define WORKER_NODE_ID_SHIFT      WORKER_LOCAL_ID_BITS                         /**< Shift of the node ID in a global (fully qualified) worker ID */
 
+#define MIN_NODE_ID               1                                            /**< Minimum value of the node ID */
 #define MAX_NODE_ID               3                                            /**< Maximum value of the node ID (equal to the number of nodes in the system) */
+
 #define MAX_WORKER_COUNT          (1 << WORKER_LOCAL_ID_BITS)                  /**< Maximum number of workers deployable */
 #define DYNAMIC_WORKER_IDS_COUNT  (MAX_WORKER_COUNT - WORKER_ID_DYNAMIC_BASE)  /**< Number of available dynamic worker IDs */
 

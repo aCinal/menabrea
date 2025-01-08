@@ -17,7 +17,7 @@ void SendMessage(TMessage message, TWorkerId receiver) {
         return;
     }
 
-    if (unlikely(receiver == WORKER_ID_INVALID || WorkerIdGetLocal(receiver) >= MAX_WORKER_COUNT || WorkerIdGetNode(receiver) > MAX_NODE_ID)) {
+    if (unlikely(receiver == WORKER_ID_INVALID || WorkerIdGetLocal(receiver) >= MAX_WORKER_COUNT || WorkerIdGetNode(receiver) < MIN_NODE_ID || WorkerIdGetNode(receiver) > MAX_NODE_ID)) {
 
         RaiseException(EExceptionFatality_NonFatal, \
             "Invalid receiver 0x%x of message 0x%x. Message not sent!", \

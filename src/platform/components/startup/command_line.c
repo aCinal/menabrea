@@ -70,6 +70,7 @@ SStartupParams * ParseCommandLine(int argc, char **argv) {
             params->NodeId = strtol(optarg, &endptr, 0);
             /* Assert a number was parsed */
             AssertTrue(endptr != optarg);
+            AssertTrue(params->NodeId >= MIN_NODE_ID);
             AssertTrue(params->NodeId <= MAX_NODE_ID);
             LogPrint(ELogSeverityLevel_Debug, "Node ID set to %d", \
                 params->NodeId);

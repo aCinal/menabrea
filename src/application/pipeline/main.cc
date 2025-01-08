@@ -16,7 +16,7 @@ APPLICATION_GLOBAL_INIT() {
      * (3) Treat the ciphertext bits as two fixed-point fractions and interpret them as coordinates
      *     of a point in the unit square. If they are farther than 1 from the origin, modify the
      *     message to have the signature verification fail. Reencrypt and forward to the verifier.
-     * (3) Decrypt, verify the signature and throw away the message. Count invalid signatures
+     * (4) Decrypt, verify the signature and throw away the message. Count invalid signatures
      *     and derive the constant pi based on their ratio.
      */
 

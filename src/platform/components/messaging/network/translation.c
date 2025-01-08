@@ -155,7 +155,7 @@ static inline bool IsValidEthHeader(odp_packet_t packet) {
         eth->src.addr[2] == MAC_ADDR_COMMON_BASE_BYTE_2 && \
         eth->src.addr[3] == MAC_ADDR_COMMON_BASE_BYTE_3 && \
         eth->src.addr[4] == MAC_ADDR_COMMON_BASE_BYTE_4 && \
-        eth->src.addr[5] <= MAX_NODE_ID && \
+        eth->src.addr[5] >= MIN_NODE_ID && eth->src.addr[5] <= MAX_NODE_ID && \
         /* Drop broadcast packets etc. */
         eth->dst.addr[0] == MAC_ADDR_COMMON_BASE_BYTE_0 && \
         eth->dst.addr[1] == MAC_ADDR_COMMON_BASE_BYTE_1 && \
