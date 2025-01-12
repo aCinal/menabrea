@@ -81,6 +81,6 @@ static int EmOutputFunction(const em_event_t events[], const unsigned int num, c
     /* CreatePacketFromMessage allocates a new event/packet from a separate pool.
      * Consume the input event. TODO: Study using a single pool with zero copy
      * and only mark the events as free from EM point POV via em_event_mark_free. */
-    em_free_multi(events, num);
+    em_free(events[0]);
     return 1;
 }

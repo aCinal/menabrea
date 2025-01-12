@@ -6,12 +6,12 @@ SRC_URI = " \
     git://github.com/OpenDataPlane/odp.git;branch=master;protocol=https \
     file://odp-menabrea.conf \
     "
-SRCREV = "875d5bb720580f4695818dfc53e2bc38e215159e"
+SRCREV = "6c3ff3558708f248e574fafd6d3eab40b48c4595"
 
 # Git repositories are cloned to ${WORKDIR}/git by default
 S = "${WORKDIR}/git"
 
-LIC_FILES_CHKSUM = "file://LICENSE;md5=18f96fe45a17e028d7b62e6191fcc675"
+LIC_FILES_CHKSUM = "file://LICENSE;md5=8ab56d375d2d299f18b6c19f0ab29437"
 
 DEPENDS = " \
     libconfig \
